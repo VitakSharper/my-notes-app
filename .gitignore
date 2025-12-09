@@ -7,3 +7,5 @@
 /.vs
 /Overflow.AppHost/bin/Debug/net10.0
 /Overflow.AppHost/obj
+/QuestionService/obj
+/QuestionService/bin/Debug/net10.0
