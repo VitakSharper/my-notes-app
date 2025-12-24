@@ -1,4 +1,7 @@
 using Overflow.ServiceDefaults;
+using QuestionService.Data;
+using QuestionService.Data.Extensions;
+using QuestionService.Data.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +20,11 @@ builder.Services.AddAuthentication()
         options.Audience = "overflow";
     });
 
+builder.AddNpgsqlDbContext<QuestionDbContext>("questionDb");
+
+builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
+builder.Services.AddScoped<ITagRepository, TagRepository>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -25,9 +33,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-
 app.MapControllers();
 
 app.MapDefaultEndpoints();
+
+await app.MigrateDatabaseWithOptions();
 
 app.Run();

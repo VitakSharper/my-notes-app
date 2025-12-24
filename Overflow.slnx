@@ -4,4 +4,5 @@
   </Folder>
   <Project Path="Overflow.AppHost/Overflow.AppHost.csproj" />
   <Project Path="Overflow.ServiceDefaults/Overflow.ServiceDefaults.csproj" />
+  <Project Path="QuestionService.Data/QuestionService.Data.csproj" />
 </Solution>
