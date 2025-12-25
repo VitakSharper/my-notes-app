@@ -20,9 +20,10 @@ public class QuestionsController(IQuestionRepository repository, ITagRepository 
     [HttpGet("{id}")]
     public async Task<ActionResult<Question>> GetQuestionById(string id, CancellationToken ct)
     {
-        var result = await repository.GetByIdAsync(id, ct)
+        var result = await repository
+            .UpdateAsync(id, q => { q.ViewCount++; return q; }, ct)
             .ToResultAsync(Error.NotFound("Question", id));
-
+        
         return result.Match(ToActionResult, ToErrorResult);
     }
 

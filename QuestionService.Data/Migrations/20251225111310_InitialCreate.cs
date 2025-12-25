@@ -1,5 +1,4 @@
-using System;
-using System.Collections.Generic;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -18,17 +17,17 @@ namespace QuestionService.Data.Migrations
                 name: "Questions",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    Title = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    Content = table.Column<string>(type: "character varying(5000)", maxLength: 5000, nullable: false),
-                    AskerId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    AskerDisplayName = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ViewCount = table.Column<int>(type: "integer", nullable: false),
-                    TagSlugs = table.Column<List<string>>(type: "text[]", nullable: false),
-                    HasAcceptedAnswer = table.Column<bool>(type: "boolean", nullable: false),
-                    Votes = table.Column<int>(type: "integer", nullable: false)
+                    Id = table.Column<string>(type: "nvarchar(36)", maxLength: 36, nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    Content = table.Column<string>(type: "nvarchar(max)", maxLength: 5000, nullable: false),
+                    AskerId = table.Column<string>(type: "nvarchar(36)", maxLength: 36, nullable: false),
+                    AskerDisplayName = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ViewCount = table.Column<int>(type: "int", nullable: false),
+                    TagSlugs = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    HasAcceptedAnswer = table.Column<bool>(type: "bit", nullable: false),
+                    Votes = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -39,10 +38,10 @@ namespace QuestionService.Data.Migrations
                 name: "Tags",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Slug = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false)
+                    Id = table.Column<string>(type: "nvarchar(36)", maxLength: 36, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Slug = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false)
                 },
                 constraints: table =>
                 {

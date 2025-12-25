@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Overflow.ServiceDefaults;
 using QuestionService.Data;
 using QuestionService.Data.Extensions;
@@ -20,8 +21,9 @@ builder.Services.AddAuthentication()
         options.Audience = "overflow";
     });
 
-builder.AddNpgsqlDbContext<QuestionDbContext>("questionDb");
+builder.AddSqlServerDbContext<QuestionDbContext>("questionDb");
 
+// Register repositories
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 
@@ -37,6 +39,6 @@ app.MapControllers();
 
 app.MapDefaultEndpoints();
 
-await app.MigrateDatabaseWithOptions();
+await app.MigrateDatabase();
 
 app.Run();
