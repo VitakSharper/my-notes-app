@@ -12,7 +12,6 @@ var sql = builder.AddSqlServer("sql", port: 1433)
 
 var questionDb = sql.AddDatabase("questionDb");
 
-
 var questionService = builder.AddProject<Projects.QuestionService>("question-svc")
     .WithReference(keycloak)
     .WithReference(questionDb)

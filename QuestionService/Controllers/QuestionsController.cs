@@ -23,7 +23,7 @@ public class QuestionsController(IQuestionRepository repository, ITagRepository 
         var result = await repository
             .UpdateAsync(id, q => { q.ViewCount++; return q; }, ct)
             .ToResultAsync(Error.NotFound("Question", id));
-        
+
         return result.Match(ToActionResult, ToErrorResult);
     }
 
@@ -135,6 +135,7 @@ public class QuestionsController(IQuestionRepository repository, ITagRepository 
         question.Title = dto.Title ?? question.Title;
         question.Content = dto.Content ?? question.Content;
         question.TagSlugs = dto.Tags ?? question.TagSlugs;
+        question.UpdatedAt = DateTime.UtcNow;
         return question;
     }
 
