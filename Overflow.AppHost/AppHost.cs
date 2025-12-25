@@ -5,8 +5,9 @@ var builder = DistributedApplication.CreateBuilder(args);
 var keycloak = builder.AddKeycloak("keycloak", 6001)
     .WithDataVolume("keycloak-data");
 
-var sql = builder.AddSqlServer("sql")
+var sql = builder.AddSqlServer("sql", port: 1433)
     .WithImageTag("2025-latest")
+    .WithDataVolume("sql-data")
     .WithLifetime(ContainerLifetime.Persistent);
 
 var questionDb = sql.AddDatabase("questionDb");
