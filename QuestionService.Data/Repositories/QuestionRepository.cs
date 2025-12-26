@@ -8,6 +8,11 @@ public sealed class QuestionRepository(QuestionDbContext context) : IQuestionRep
     public Task<Question?> GetByIdAsync(string id, CancellationToken ct = default) =>
         context.Questions.FirstOrDefaultAsync(q => q.Id == id, ct);
 
+    public Task<Question?> GetByIdWithAnswersAsync(string id, CancellationToken ct = default) =>
+        context.Questions
+            .Include(q => q.Answers)
+            .FirstOrDefaultAsync(q => q.Id == id, ct);
+
     public async Task<IReadOnlyList<Question>> GetAllAsync(CancellationToken ct = default) =>
         await context.Questions.ToListAsync(ct);
 

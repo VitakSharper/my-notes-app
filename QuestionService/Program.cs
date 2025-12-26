@@ -30,6 +30,7 @@ builder.AddSqlServerDbContext<QuestionDbContext>("questionDb");
 
 // Register repositories
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
+builder.Services.AddScoped<IAnswerRepository, AnswerRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 
 // Register services

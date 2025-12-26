@@ -13,7 +13,11 @@ namespace QuestionService.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class QuestionsController(IQuestionRepository repository, TagService tagService, IMessageBus bus) : ControllerBase
+public class QuestionsController(
+    IQuestionRepository repository,
+    IAnswerRepository answerRepository,
+    TagService tagService,
+    IMessageBus bus) : ControllerBase
 {
     // Keycloak JWT claim names
     private const string KeycloakSubjectClaim = "sub";
@@ -23,11 +27,15 @@ public class QuestionsController(IQuestionRepository repository, TagService tagS
     [HttpGet("{id}")]
     public async Task<ActionResult<Question>> GetQuestionById(string id, CancellationToken ct)
     {
-        var result = await repository
-            .UpdateAsync(id, q => { q.ViewCount++; return q; }, ct)
-            .ToResultAsync(Error.NotFound("Question", id));
+        var question = await repository.GetByIdWithAnswersAsync(id, ct);
+        
+        if (question is null)
+            return NotFound($"Question with id '{id}' was not found.");
 
-        return result.Match(ToActionResult, ToErrorResult);
+        question.ViewCount++;
+        await repository.UpdateAsync(id, q => { q.ViewCount = question.ViewCount; return q; }, ct);
+
+        return Ok(question);
     }
 
     [HttpGet]
@@ -104,6 +112,139 @@ public class QuestionsController(IQuestionRepository repository, TagService tagS
         await bus.PublishAsync(new QuestionDeleted(id));
         return NoContent();
     }
+
+    // Answer endpoints
+
+    [Authorize]
+    [HttpPost("{questionId}/answers")]
+    public async Task<ActionResult<Answer>> CreateAnswer(string questionId, CreateAnswerDto dto, CancellationToken ct) =>
+        await ExtractUserInfo()
+            .MatchAsync(
+                onSuccess: async user =>
+                {
+                    var question = await repository.GetByIdAsync(questionId, ct);
+                    if (question is null)
+                        return (ActionResult<Answer>)NotFound($"Question with id '{questionId}' was not found.");
+
+                    var answer = new Answer
+                    {
+                        QuestionId = questionId,
+                        Content = dto.Content,
+                        AuthorId = user.UserId,
+                        AuthorDisplayName = user.DisplayName
+                    };
+
+                    var created = await answerRepository.AddAsync(answer, ct);
+
+                    var updatedQuestion = await repository.UpdateAsync(questionId, q =>
+                    {
+                        q.AnswerCount++;
+                        return q;
+                    }, ct);
+
+                    await bus.PublishAsync(new UpdatedAnswerCount(questionId, updatedQuestion!.AnswerCount));
+
+                    return (ActionResult<Answer>)CreatedAtAction(nameof(GetQuestionById), new { id = questionId }, created);
+                },
+                onFailure: error => Task.FromResult<ActionResult<Answer>>(Unauthorized(error.Message))
+            );
+
+    [Authorize]
+    [HttpPut("{questionId}/answers/{answerId}")]
+    public async Task<ActionResult> UpdateAnswer(string questionId, string answerId, UpdateAnswerDto dto, CancellationToken ct) =>
+        await ExtractUserInfo()
+            .MatchAsync(
+                onSuccess: async user =>
+                {
+                    var answer = await answerRepository.GetByIdAsync(answerId, ct);
+                    if (answer is null || answer.QuestionId != questionId)
+                        return (ActionResult)NotFound($"Answer with id '{answerId}' was not found.");
+
+                    if (answer.AuthorId != user.UserId)
+                        return Unauthorized("You can only update your own answers.");
+
+                    await answerRepository.UpdateAsync(answerId, a =>
+                    {
+                        a.Content = dto.Content ?? a.Content;
+                        return a;
+                    }, ct);
+
+                    return NoContent();
+                },
+                onFailure: error => Task.FromResult<ActionResult>(Unauthorized(error.Message))
+            );
+
+    [Authorize]
+    [HttpDelete("{questionId}/answers/{answerId}")]
+    public async Task<ActionResult> DeleteAnswer(string questionId, string answerId, CancellationToken ct) =>
+        await ExtractUserInfo()
+            .MatchAsync(
+                onSuccess: async user =>
+                {
+                    var answer = await answerRepository.GetByIdAsync(answerId, ct);
+                    if (answer is null || answer.QuestionId != questionId)
+                        return (ActionResult)NotFound($"Answer with id '{answerId}' was not found.");
+
+                    if (answer.AuthorId != user.UserId)
+                        return Unauthorized("You can only delete your own answers.");
+
+                    if (answer.IsAccepted)
+                        return BadRequest("Cannot delete an accepted answer.");
+
+                    await answerRepository.DeleteAsync(answerId, ct);
+
+                    var updatedQuestion = await repository.UpdateAsync(questionId, q =>
+                    {
+                        q.AnswerCount = Math.Max(0, q.AnswerCount - 1);
+                        return q;
+                    }, ct);
+
+                    await bus.PublishAsync(new UpdatedAnswerCount(questionId, updatedQuestion!.AnswerCount));
+
+                    return NoContent();
+                },
+                onFailure: error => Task.FromResult<ActionResult>(Unauthorized(error.Message))
+            );
+
+    [Authorize]
+    [HttpPost("{questionId}/answers/{answerId}/accept")]
+    public async Task<ActionResult> AcceptAnswer(string questionId, string answerId, CancellationToken ct) =>
+        await ExtractUserInfo()
+            .MatchAsync(
+                onSuccess: async user =>
+                {
+                    var question = await repository.GetByIdAsync(questionId, ct);
+                    if (question is null)
+                        return (ActionResult)NotFound($"Question with id '{questionId}' was not found.");
+
+                    if (question.AskerId != user.UserId)
+                        return Unauthorized("Only the question author can accept an answer.");
+
+                    if (question.HasAcceptedAnswer)
+                        return BadRequest("This question already has an accepted answer.");
+
+                    var answer = await answerRepository.GetByIdAsync(answerId, ct);
+                    if (answer is null || answer.QuestionId != questionId)
+                        return NotFound($"Answer with id '{answerId}' was not found.");
+
+                    await answerRepository.UpdateAsync(answerId, a =>
+                    {
+                        a.IsAccepted = true;
+                        return a;
+                    }, ct);
+
+                    await repository.UpdateAsync(questionId, q =>
+                    {
+                        q.HasAcceptedAnswer = true;
+                        return q;
+                    }, ct);
+
+                    await bus.PublishAsync(new AnswerAccepted(questionId, answerId));
+
+                    return NoContent();
+                },
+                onFailure: error => Task.FromResult<ActionResult>(Unauthorized(error.Message))
+            );
 
     private Result<UserInfo> ExtractUserInfo()
     {

@@ -6,6 +6,7 @@ namespace QuestionService.Data;
 public class QuestionDbContext(DbContextOptions<QuestionDbContext> options) : DbContext(options)
 {
     public DbSet<Question> Questions { get; set; }
+    public DbSet<Answer> Answers { get; set; }
     public DbSet<Tag> Tags { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

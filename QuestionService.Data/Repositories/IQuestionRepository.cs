@@ -6,6 +6,8 @@ public interface IQuestionRepository
 {
     Task<Question?> GetByIdAsync(string id, CancellationToken ct = default);
     
+    Task<Question?> GetByIdWithAnswersAsync(string id, CancellationToken ct = default);
+    
     Task<IReadOnlyList<Question>> GetAllAsync(CancellationToken ct = default);
     
     Task<IReadOnlyList<Question>> GetByAskerIdAsync(string askerId, CancellationToken ct = default);
