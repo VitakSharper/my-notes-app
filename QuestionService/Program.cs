@@ -5,6 +5,7 @@ using Overflow.ServiceDefaults;
 using QuestionService.Data;
 using QuestionService.Data.Extensions;
 using QuestionService.Data.Repositories;
+using QuestionService.Services;
 using Wolverine;
 using Wolverine.RabbitMQ;
 
@@ -30,6 +31,10 @@ builder.AddSqlServerDbContext<QuestionDbContext>("questionDb");
 // Register repositories
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
+
+// Register services
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<TagService>();
 
 builder.Services.AddOpenTelemetry().WithTracing(traceProviderBuilder =>
 {
