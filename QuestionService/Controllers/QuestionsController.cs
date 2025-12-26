@@ -28,7 +28,7 @@ public class QuestionsController(
     public async Task<ActionResult<Question>> GetQuestionById(string id, CancellationToken ct)
     {
         var question = await repository.GetByIdWithAnswersAsync(id, ct);
-        
+
         if (question is null)
             return NotFound($"Question with id '{id}' was not found.");
 
@@ -215,7 +215,7 @@ public class QuestionsController(
                 {
                     var question = await repository.GetByIdAsync(questionId, ct);
                     if (question is null)
-                        return (ActionResult)NotFound($"Question with id '{questionId}' was not found.");
+                        return NotFound($"Question with id '{questionId}' was not found.");
 
                     if (question.AskerId != user.UserId)
                         return Unauthorized("Only the question author can accept an answer.");
