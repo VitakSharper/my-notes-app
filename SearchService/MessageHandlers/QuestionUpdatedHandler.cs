@@ -9,18 +9,14 @@ public class QuestionUpdatedHandler(ITypesenseClient client)
 
     public async Task HandleAsync(Contracts.QuestionUpdated message)
     {
-
-        var searchQuestion = new Models.SearchQuestion
+        await client.UpdateDocument("questions", message.QuestionId, new
         {
-            Id = message.QuestionId,
-            Title = message.Title,
+            message.Title,
             Content = StripHtml(message.Content),
-            Tags = message.Tags.ToArray(),
-        };
+            Tags = message.Tags.ToArray()
+        });
 
-        await client.UpdateDocument("questions", searchQuestion.Id, searchQuestion);
-
-        Console.WriteLine($"Document updated: {searchQuestion.Id}");
+        Console.WriteLine($"Document updated: {message.QuestionId}");
     }
 
     private static string StripHtml(string content) => HtmlRgx.Replace(content, string.Empty);
