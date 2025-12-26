@@ -1,16 +1,18 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Contracts;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using QuestionService.Data.Functional;
 using QuestionService.Data.Models;
 using QuestionService.Data.Repositories;
 using QuestionService.DTOs;
 using System.Security.Claims;
+using Wolverine;
 
 namespace QuestionService.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class QuestionsController(IQuestionRepository repository, ITagRepository tagRepository) : ControllerBase
+public class QuestionsController(IQuestionRepository repository, ITagRepository tagRepository, IMessageBus bus) : ControllerBase
 {
     // Keycloak JWT claim names
     private const string KeycloakSubjectClaim = "sub";
@@ -50,6 +52,14 @@ public class QuestionsController(IQuestionRepository repository, ITagRepository 
                         {
                             var question = CreateQuestionFromDto(dto, user);
                             var created = await repository.AddAsync(question, ct);
+                            
+                            await bus.PublishAsync(new QuestionCreated(
+                                created.Id!,
+                                created.Title,
+                                created.Content,
+                                created.CreatedAt,
+                                created.TagSlugs));
+                            
                             return (ActionResult<Question>)CreatedAtAction(nameof(GetQuestionById), new { id = created.Id }, created);
                         },
                         onFailure: error => Task.FromResult<ActionResult<Question>>(BadRequest(error.Message))
