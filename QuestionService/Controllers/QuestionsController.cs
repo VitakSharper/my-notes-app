@@ -5,6 +5,7 @@ using QuestionService.Data.Functional;
 using QuestionService.Data.Models;
 using QuestionService.Data.Repositories;
 using QuestionService.DTOs;
+using QuestionService.Services;
 using System.Security.Claims;
 using Wolverine;
 
@@ -12,7 +13,7 @@ namespace QuestionService.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class QuestionsController(IQuestionRepository repository, ITagRepository tagRepository, IMessageBus bus) : ControllerBase
+public class QuestionsController(IQuestionRepository repository, TagService tagService, IMessageBus bus) : ControllerBase
 {
     // Keycloak JWT claim names
     private const string KeycloakSubjectClaim = "sub";
@@ -46,24 +47,20 @@ public class QuestionsController(IQuestionRepository repository, ITagRepository 
             .MatchAsync(
                 onSuccess: async user =>
                 {
-                    var tagValidation = await ValidateTagsAsync(dto.Tags, ct);
-                    return await tagValidation.MatchAsync(
-                        onSuccess: async _ =>
-                        {
-                            var question = CreateQuestionFromDto(dto, user);
-                            var created = await repository.AddAsync(question, ct);
-                            
-                            await bus.PublishAsync(new QuestionCreated(
-                                created.Id!,
-                                created.Title,
-                                created.Content,
-                                created.CreatedAt,
-                                created.TagSlugs));
-                            
-                            return (ActionResult<Question>)CreatedAtAction(nameof(GetQuestionById), new { id = created.Id }, created);
-                        },
-                        onFailure: error => Task.FromResult<ActionResult<Question>>(BadRequest(error.Message))
-                    );
+                    if (dto.Tags.Count > 0 && !await tagService.AreTagsValidAsync(dto.Tags, ct))
+                        return (ActionResult<Question>)BadRequest("One or more tags are invalid.");
+
+                    var question = CreateQuestionFromDto(dto, user);
+                    var created = await repository.AddAsync(question, ct);
+
+                    await bus.PublishAsync(new QuestionCreated(
+                        created.Id!,
+                        created.Title,
+                        created.Content,
+                        created.CreatedAt,
+                        created.TagSlugs));
+
+                    return (ActionResult<Question>)CreatedAtAction(nameof(GetQuestionById), new { id = created.Id }, created);
                 },
                 onFailure: error => Task.FromResult<ActionResult<Question>>(Unauthorized(error.Message))
             );
@@ -75,12 +72,8 @@ public class QuestionsController(IQuestionRepository repository, ITagRepository 
             .MatchAsync(
                 onSuccess: async user =>
                 {
-                    if (dto.Tags is not null)
-                    {
-                        var tagValidation = await ValidateTagsAsync(dto.Tags, ct);
-                        if (tagValidation.IsFailure)
-                            return tagValidation.Match(_ => default!, ToErrorResult);
-                    }
+                    if (dto.Tags is not null && dto.Tags.Count > 0 && !await tagService.AreTagsValidAsync(dto.Tags, ct))
+                        return (ActionResult<Question>)BadRequest("One or more tags are invalid.");
 
                     var result = await repository
                         .UpdateAsync(id, q => ApplyUpdate(q, dto, user.UserId), ct)
@@ -98,18 +91,6 @@ public class QuestionsController(IQuestionRepository repository, ITagRepository 
             true => NoContent(),
             false => NotFound()
         };
-
-    private async Task<Result<bool>> ValidateTagsAsync(List<string> tagSlugs, CancellationToken ct)
-    {
-        if (tagSlugs.Count == 0)
-            return true;
-
-        var invalidSlugs = await tagRepository.GetInvalidSlugsAsync(tagSlugs, ct);
-
-        return invalidSlugs.Count == 0
-            ? true
-            : Error.Validation($"Invalid tags: {string.Join(", ", invalidSlugs)}");
-    }
 
     private Result<UserInfo> ExtractUserInfo()
     {
