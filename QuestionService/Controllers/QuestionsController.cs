@@ -78,19 +78,32 @@ public class QuestionsController(IQuestionRepository repository, TagService tagS
                     var result = await repository
                         .UpdateAsync(id, q => ApplyUpdate(q, dto, user.UserId), ct)
                         .ToResultAsync(Error.NotFound("Question", id));
-                    return result.Match(ToActionResult, ToErrorResult);
+
+                    return result.Match(
+                        onSuccess: updated =>
+                        {
+                            bus.PublishAsync(new QuestionUpdated(
+                                updated.Id!,
+                                updated.Title,
+                                updated.Content,
+                                updated.TagSlugs));
+                            return ToActionResult(updated);
+                        },
+                        onFailure: ToErrorResult);
                 },
                 onFailure: error => Task.FromResult<ActionResult<Question>>(Unauthorized(error.Message))
             );
 
     [Authorize]
     [HttpDelete("{id}")]
-    public async Task<ActionResult> DeleteQuestion(string id, CancellationToken ct) =>
-        await repository.DeleteAsync(id, ct) switch
-        {
-            true => NoContent(),
-            false => NotFound()
-        };
+    public async Task<ActionResult> DeleteQuestion(string id, CancellationToken ct)
+    {
+        var deleted = await repository.DeleteAsync(id, ct);
+
+        if (!deleted) return NotFound();
+        await bus.PublishAsync(new QuestionDeleted(id));
+        return NoContent();
+    }
 
     private Result<UserInfo> ExtractUserInfo()
     {
