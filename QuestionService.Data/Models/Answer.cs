@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace QuestionService.Data.Models;
 
@@ -9,6 +10,8 @@ public class Answer
     [MaxLength(5000)] public required string Content { get; set; }
 
     [MaxLength(36)] public required string QuestionId { get; set; }
+    
+    [JsonIgnore]
     public Question Question { get; set; } = null!;
 
     [MaxLength(36)] public required string AuthorId { get; set; }
