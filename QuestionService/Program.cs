@@ -1,8 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Overflow.ServiceDefaults;
 using QuestionService.Data;
 using QuestionService.Data.Extensions;
 using QuestionService.Data.Repositories;
+using Wolverine;
+using Wolverine.RabbitMQ;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +30,19 @@ builder.AddSqlServerDbContext<QuestionDbContext>("questionDb");
 // Register repositories
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
+
+builder.Services.AddOpenTelemetry().WithTracing(traceProviderBuilder =>
+{
+    traceProviderBuilder.SetResourceBuilder(ResourceBuilder.CreateDefault()
+            .AddService(builder.Environment.ApplicationName))
+        .AddSource("Wolverine");
+});
+
+builder.Host.UseWolverine(options =>
+{
+    options.UseRabbitMqUsingNamedConnection("messaging").AutoProvision();
+    options.PublishAllMessages().ToRabbitExchange("questions");
+});
 
 var app = builder.Build();
 
