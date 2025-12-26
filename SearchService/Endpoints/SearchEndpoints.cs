@@ -7,6 +7,7 @@ namespace SearchService.Endpoints;
 public static class SearchEndpoints
 {
     private static readonly Regex SomeRgx = new(@"\[(.*?)\]", RegexOptions.Compiled);
+
     public static IEndpointRouteBuilder MapSearchEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/search", async (string query, ITypesenseClient client) =>
@@ -34,6 +35,21 @@ public static class SearchEndpoints
             catch (Exception e)
             {
                 return Results.Problem("Typesense search failed.", e.Message);
+            }
+        });
+
+        app.MapGet("/search/similar-titles", async (string query, ITypesenseClient client) =>
+        {
+            var searchParams = new SearchParameters(query, "title");
+
+            try
+            {
+                var result = await client.Search<SearchQuestion>("questions", searchParams);
+                return Results.Ok(result.Hits.Select(hit => hit.Document));
+            }
+            catch (Exception e)
+            {
+                return Results.Problem("Typesense search failed", e.Message);
             }
         });
 
