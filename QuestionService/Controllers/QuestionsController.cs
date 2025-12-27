@@ -33,13 +33,18 @@ public class QuestionsController(
             return NotFound($"Question with id '{id}' was not found.");
 
         question.ViewCount++;
-        await repository.UpdateAsync(id, q => { q.ViewCount = question.ViewCount; return q; }, ct);
+        await repository.UpdateAsync(id, q =>
+        {
+            q.ViewCount = question.ViewCount;
+            return q;
+        }, ct);
 
         return Ok(question);
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Question>>> GetAllQuestions([FromQuery] string? tag, CancellationToken ct) =>
+    public async Task<ActionResult<IReadOnlyList<Question>>> GetAllQuestions([FromQuery] string? tag,
+        CancellationToken ct) =>
         tag is not null
             ? Ok(await repository.GetByTagSlugAsync(tag, ct))
             : Ok(await repository.GetAllAsync(ct));
@@ -68,7 +73,8 @@ public class QuestionsController(
                         created.CreatedAt,
                         created.TagSlugs));
 
-                    return (ActionResult<Question>)CreatedAtAction(nameof(GetQuestionById), new { id = created.Id }, created);
+                    return (ActionResult<Question>)CreatedAtAction(nameof(GetQuestionById), new { id = created.Id },
+                        created);
                 },
                 onFailure: error => Task.FromResult<ActionResult<Question>>(Unauthorized(error.Message))
             );
@@ -117,7 +123,8 @@ public class QuestionsController(
 
     [Authorize]
     [HttpPost("{questionId}/answers")]
-    public async Task<ActionResult<Answer>> CreateAnswer(string questionId, CreateAnswerDto dto, CancellationToken ct) =>
+    public async Task<ActionResult<Answer>>
+        CreateAnswer(string questionId, CreateAnswerDto dto, CancellationToken ct) =>
         await ExtractUserInfo()
             .MatchAsync(
                 onSuccess: async user =>
@@ -144,14 +151,16 @@ public class QuestionsController(
 
                     await bus.PublishAsync(new UpdatedAnswerCount(questionId, updatedQuestion!.AnswerCount));
 
-                    return (ActionResult<Answer>)CreatedAtAction(nameof(GetQuestionById), new { id = questionId }, created);
+                    return (ActionResult<Answer>)CreatedAtAction(nameof(GetQuestionById), new { id = questionId },
+                        created);
                 },
                 onFailure: error => Task.FromResult<ActionResult<Answer>>(Unauthorized(error.Message))
             );
 
     [Authorize]
     [HttpPut("{questionId}/answers/{answerId}")]
-    public async Task<ActionResult> UpdateAnswer(string questionId, string answerId, UpdateAnswerDto dto, CancellationToken ct) =>
+    public async Task<ActionResult> UpdateAnswer(string questionId, string answerId, UpdateAnswerDto dto,
+        CancellationToken ct) =>
         await ExtractUserInfo()
             .MatchAsync(
                 onSuccess: async user =>
@@ -246,21 +255,39 @@ public class QuestionsController(
                 onFailure: error => Task.FromResult<ActionResult>(Unauthorized(error.Message))
             );
 
+    //Error endpoint
+
+    [HttpGet("errors")]
+    public ActionResult GetErrorResponses(int code)
+    {
+        ModelState.AddModelError("Problem one", "Validation problem one");
+        ModelState.AddModelError("Problem two", "Validation problem two");
+
+        return code switch
+        {
+            400 => BadRequest("Opposite of good request."),
+            401 => Unauthorized(),
+            403 => Forbid(),
+            404 => NotFound(),
+            500 => throw new Exception("This is a server error."),
+            _ => ValidationProblem(ModelState)
+        };
+    }
+
     private Result<UserInfo> ExtractUserInfo()
     {
         var userId = User.FindFirstValue(KeycloakSubjectClaim)
-                  ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+                     ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         var userName = User.FindFirstValue(KeycloakPreferredUsernameClaim)
-                    ?? User.FindFirstValue(KeycloakNameClaim)
-                    ?? User.FindFirstValue(ClaimTypes.Name);
+                       ?? User.FindFirstValue(KeycloakNameClaim)
+                       ?? User.FindFirstValue(ClaimTypes.Name);
 
         return (userId, userName) switch
         {
             ({ } id, { } name) => new UserInfo(id, name),
             _ => Error.Unauthorized("User identity could not be determined")
         };
-
     }
 
     private static Question CreateQuestionFromDto(CreateQuestionDto dto, UserInfo user) =>
