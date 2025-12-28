@@ -17,3 +17,9 @@
 /SearchService/obj
 /Contracts/obj
 /Contracts/bin/Debug/net10.0
+/Contracts/bin/Release/net10.0
+/Overflow.ServiceDefaults/bin/Release/net10.0
+/QuestionService/bin/Release/net10.0/linux-x64/BuildHost-net472
+/QuestionService/bin/Release/net10.0/linux-x64
+/QuestionService.Data/bin/Release/net10.0
+/SearchService/bin/Release/net10.0/linux-x64

@@ -1,20 +1,33 @@
+using Microsoft.Extensions.Hosting;
+
 Environment.SetEnvironmentVariable("ASPIRE_ALLOW_UNSECURED_TRANSPORT", "true");
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+var compose = builder.AddDockerComposeEnvironment("production")
+    .WithDashboard(dashboard => dashboard.WithHostPort(8080));
+
 var keycloak = builder.AddKeycloak("keycloak", 6001)
-    .WithDataVolume("keycloak-data");
+    .WithDataVolume("keycloak-data")
+    .WithRealmImport("../Overflow.AppHost/infra/realms")
+    .WithEnvironment("KC_HTTP_ENABLED", "true")
+    .WithEnvironment("KC_HOSTNAME_STRICT", "false")
+    .WithEndpoint(port: 6001, targetPort: 8080, isExternal: true);
 
 var sql = builder.AddSqlServer("sql", port: 1433)
     .WithImageTag("2025-latest")
     .WithDataVolume("sql-data")
     .WithLifetime(ContainerLifetime.Persistent);
 
-var typeSenseApiKey = builder.AddParameter("typesense-api-key", secret: true);
+var typeSenseApiKey = builder.Environment.IsDevelopment()
+    ? builder.Configuration["Parameters:typesense-api-key"] ??
+      throw new InvalidOperationException("Typesense API key not found in configuration.")
+    : "${TYPESENSE_API_KEY}";
 
 var typeSense = builder.AddContainer("typesense", "typesense/typesense", "29.0")
     .WithArgs("--data-dir", "/data", "--api-key", typeSenseApiKey, "--enable-cors", "true")
     .WithVolume(name: "typesense-data", target: "/data")
+    .WithEnvironment("TYPESENSE_API_KEY", typeSenseApiKey)
     .WithHttpEndpoint(port: 8108, targetPort: 8108, name: "typesense");
 
 var typeSenseContainer = typeSense.GetEndpoint("typesense");
