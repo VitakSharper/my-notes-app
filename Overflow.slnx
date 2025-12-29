@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/common/">
+    <Project Path="Common/Common.csproj" Id="f3a61c4e-d4f4-4725-970e-80f739856447" />
     <Project Path="Contracts/Contracts.csproj" Id="ec04b007-1f8f-451d-b426-fb199bdc47fa" />
   </Folder>
   <Folder Name="/services/">

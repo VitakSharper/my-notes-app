@@ -1,11 +1,9 @@
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
+using Common;
 using Overflow.ServiceDefaults;
 using SearchService.Data;
 using SearchService.Endpoints;
 using Typesense;
 using Typesense.Setup;
-using Wolverine;
 using Wolverine.RabbitMQ;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +12,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.AddServiceDefaults();
+
+await builder.UseWolverineWithRabbitMqAsync(options =>
+{
+    options.ListenToRabbitQueue("questions.search", cfg =>
+    {
+        cfg.BindExchange("questions");
+    });
+
+    options.ApplicationAssembly = typeof(Program).Assembly;
+});
 
 var typeSenseUri = builder.Configuration["services:typesense:typesense:0"] ??
                    throw new InvalidOperationException("Typesense URI is not configured.");
@@ -29,24 +37,6 @@ builder.Services.AddTypesenseClient(config =>
     {
         new(uri.Host, uri.Port.ToString(), uri.Scheme)
     };
-});
-
-// Add OpenTelemetry BEFORE Build()
-builder.Services.AddOpenTelemetry().WithTracing(traceProviderBuilder =>
-{
-    traceProviderBuilder.SetResourceBuilder(ResourceBuilder.CreateDefault()
-            .AddService(builder.Environment.ApplicationName))
-        .AddSource("Wolverine");
-});
-
-// Configure Wolverine BEFORE Build()
-builder.Host.UseWolverine(options =>
-{
-    options.UseRabbitMqUsingNamedConnection("messaging").AutoProvision();
-    options.ListenToRabbitQueue("questions.search", cfg =>
-    {
-        cfg.BindExchange("questions");
-    });
 });
 
 var app = builder.Build();
