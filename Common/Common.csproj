@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Polly" Version="8.6.5" />
     <PackageReference Include="WolverineFx.RabbitMQ" Version="5.9.2" />
+    <PackageReference Include="Aspire.Keycloak.Authentication" Version="13.1.0-preview.1.25616.3" />
   </ItemGroup>
 
   <ItemGroup>
