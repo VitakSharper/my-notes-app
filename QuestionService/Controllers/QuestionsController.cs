@@ -1,4 +1,5 @@
 ﻿using Contracts;
+using Ganss.Xss;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using QuestionService.Data.Functional;
@@ -23,6 +24,11 @@ public class QuestionsController(
     private const string KeycloakSubjectClaim = "sub";
     private const string KeycloakPreferredUsernameClaim = "preferred_username";
     private const string KeycloakNameClaim = "name";
+
+    // Questions and answers are stored as HTML and rendered with dangerouslySetInnerHTML, so
+    // every piece of content that reaches the database goes through here first. The client is not
+    // the only possible caller, so sanitising client-side would prove nothing.
+    private readonly HtmlSanitizer _sanitizer = new();
 
     [HttpGet("{id}")]
     public async Task<ActionResult<Question>> GetQuestionById(string id, CancellationToken ct)
@@ -136,7 +142,7 @@ public class QuestionsController(
                     var answer = new Answer
                     {
                         QuestionId = questionId,
-                        Content = dto.Content,
+                        Content = _sanitizer.Sanitize(dto.Content),
                         AuthorId = user.UserId,
                         AuthorDisplayName = user.DisplayName
                     };
@@ -174,7 +180,7 @@ public class QuestionsController(
 
                     await answerRepository.UpdateAsync(answerId, a =>
                     {
-                        a.Content = dto.Content ?? a.Content;
+                        a.Content = dto.Content is null ? a.Content : _sanitizer.Sanitize(dto.Content);
                         return a;
                     }, ct);
 
@@ -271,22 +277,22 @@ public class QuestionsController(
         };
     }
 
-    private static Question CreateQuestionFromDto(CreateQuestionDto dto, UserInfo user) =>
+    private Question CreateQuestionFromDto(CreateQuestionDto dto, UserInfo user) =>
         new()
         {
             Title = dto.Title,
-            Content = dto.Content,
+            Content = _sanitizer.Sanitize(dto.Content),
             TagSlugs = dto.Tags,
             AskerId = user.UserId,
             AskerDisplayName = user.DisplayName
         };
 
-    private static Question ApplyUpdate(Question question, UpdateQuestionDto dto, string userId)
+    private Question ApplyUpdate(Question question, UpdateQuestionDto dto, string userId)
     {
         if (question.AskerId != userId) return question;
 
         question.Title = dto.Title ?? question.Title;
-        question.Content = dto.Content ?? question.Content;
+        question.Content = dto.Content is null ? question.Content : _sanitizer.Sanitize(dto.Content);
         question.TagSlugs = dto.Tags ?? question.TagSlugs;
         question.UpdatedAt = DateTime.UtcNow;
         return question;

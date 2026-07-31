@@ -13,8 +13,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, account }) {
+    async jwt({ token, account, profile }) {
       const now = Math.floor(Date.now() / 1000);
+
+      // token.sub is not the Keycloak user id; the id we need to compare against a question's
+      // askerId only ever arrives on the profile, which is populated at sign-in.
+      if (profile?.sub) {
+        token.sub = profile.sub;
+      }
 
       // `account` is only populated on the sign-in call - the one and only moment Keycloak hands
       // us the tokens - so they have to be copied onto the JWT to survive later calls.
@@ -74,6 +80,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (token.accessToken) {
         session.accessToken = token.accessToken;
+      }
+
+      if (token.sub) {
+        session.user.id = token.sub;
       }
 
       if (token.accessTokenExpires) {

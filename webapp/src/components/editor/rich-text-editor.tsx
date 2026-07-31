@@ -2,6 +2,7 @@ import MenuBar from "@/components/editor/menu-bar";
 import StarterKit from "@tiptap/starter-kit";
 import { EditorContent, useEditor } from "@tiptap/react";
 import clsx from "clsx";
+import { useEffect } from "react";
 
 type Props = {
   onChange: (body: string) => void;
@@ -34,6 +35,16 @@ export default function RichTextEditor({
     onBlur: () => onBlur(),
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
+
+  // `content` is only read when the editor is created, so an edit form - which resets its values
+  // in an effect, after the editor already exists - would show an empty body. Comparing with the
+  // current HTML keeps this a no-op while typing, and emitUpdate: false avoids feeding the value
+  // straight back into the form.
+  useEffect(() => {
+    if (editor && value && editor.getHTML() !== value) {
+      editor.commands.setContent(value, { emitUpdate: false });
+    }
+  }, [editor, value]);
 
   return (
     <div>

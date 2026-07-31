@@ -1,6 +1,7 @@
 "use server";
 
 import { fetchClient } from "@/lib/fetch-client";
+import { QuestionSchema } from "@/lib/schemas/question-schema";
 import { Question, SearchQuestion } from "@/lib/types";
 
 export async function getQuestions(tag?: string) {
@@ -11,6 +12,15 @@ export async function getQuestions(tag?: string) {
 
 export async function getQuestionById(id: string) {
   return fetchClient<Question>(`/questions/${id}`, "GET");
+}
+
+export async function postQuestion(question: QuestionSchema) {
+  return fetchClient<Question>("/questions", "POST", { body: question });
+}
+
+// The id travels separately: the schema describes the form fields, and has no id of its own.
+export async function updateQuestion(question: QuestionSchema, id: string) {
+  return fetchClient<Question>(`/questions/${id}`, "PUT", { body: question });
 }
 
 // Goes to the SearchService (Typesense) through the gateway, not to the QuestionService.

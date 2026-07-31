@@ -1,7 +1,12 @@
 "use client";
 
 import RichTextEditor from "@/components/editor/rich-text-editor";
+import {
+  postQuestion,
+  updateQuestion,
+} from "@/lib/actions/question-actions";
 import { useTagStore } from "@/lib/hooks/use-tag-store";
+import { Question } from "@/lib/types";
 import {
   QuestionSchema,
   QuestionSchemaInput,
@@ -12,16 +17,28 @@ import { Button } from "@heroui/button";
 import { Form } from "@heroui/form";
 import { Input } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
+import { handleError } from "@/lib/util";
 import clsx from "clsx";
+import { useRouter } from "next/navigation";
+import { useEffect, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 
-export default function QuestionForm() {
+type Props = {
+  // Present when the form is used to edit; absent when asking a new question.
+  questionToUpdate?: Question;
+};
+
+export default function QuestionForm({ questionToUpdate }: Props) {
   const tags = useTagStore((state) => state.tags);
+  const router = useRouter();
+  // isSubmitting alone lags behind the redirect, so the transition drives the button state too.
+  const [pending, startTransition] = useTransition();
 
   const {
     register,
     handleSubmit,
     control,
+    reset,
     formState: { isSubmitting, isValid, errors },
   } = useForm<QuestionSchemaInput, unknown, QuestionSchema>({
     resolver: zodResolver(questionSchema),
@@ -32,8 +49,36 @@ export default function QuestionForm() {
     defaultValues: { title: "", content: "", tags: [] },
   });
 
+  useEffect(() => {
+    if (questionToUpdate) {
+      // The API calls them tagSlugs, the form calls them tags.
+      reset({ ...questionToUpdate, tags: questionToUpdate.tagSlugs });
+    }
+  }, [questionToUpdate, reset]);
+
   const onSubmit = (data: QuestionSchema) => {
-    console.log(data);
+    // The callback has to resolve to void, so handleError is called as a statement here.
+    startTransition(async () => {
+      if (questionToUpdate) {
+        const { error } = await updateQuestion(data, questionToUpdate.id);
+
+        if (error) {
+          handleError(error);
+          return;
+        }
+
+        router.push(`/questions/${questionToUpdate.id}`);
+      } else {
+        const { data: question, error } = await postQuestion(data);
+
+        if (error) {
+          handleError(error);
+          return;
+        }
+
+        if (question) router.push(`/questions/${question.id}`);
+      }
+    });
   };
 
   return (
@@ -120,10 +165,10 @@ export default function QuestionForm() {
         type="submit"
         color="primary"
         className="w-fit"
-        isLoading={isSubmitting}
-        isDisabled={!isValid}
+        isLoading={isSubmitting || pending}
+        isDisabled={!isValid || pending}
       >
-        post your question
+        {questionToUpdate ? "update" : "post"} your question
       </Button>
     </Form>
   );
