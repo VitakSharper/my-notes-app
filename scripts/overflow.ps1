@@ -40,11 +40,14 @@ $infra = Join-Path $repoRoot 'Overflow.AppHost/infra'
 $webapp = Join-Path $repoRoot 'webapp'
 $project = 'overflow'
 
-# Images the SDK builds (there is no Dockerfile): kept in sync with the compose file.
+# Images the SDK builds from the projects (no Dockerfile involved): kept in sync with the compose
+# file. The client app is the exception - it has a Dockerfile, so it is a plain docker build.
 $serviceImages = @{
     'question-svc' = Join-Path $repoRoot 'QuestionService/QuestionService.csproj'
     'search-svc'   = Join-Path $repoRoot 'SearchService/SearchService.csproj'
 }
+
+$webappImage = 'webapp:latest'
 
 # Only what compose actually publishes on the host: SQL, RabbitMQ and Typesense are `expose`d to
 # the aspire network only, so they are reachable from the services but not from here.
@@ -55,7 +58,10 @@ $endpoints = [ordered]@{
     'MinIO (S3)'       = 'http://localhost:9000/minio/health/live'
     'MinIO console'    = 'http://localhost:9001'
     'Aspire dashboard' = 'http://localhost:8080'
-    'Client app'       = 'http://localhost:3000/questions'
+    # The container publishes 4000 on the host, but the app only works through the proxy: the
+    # Keycloak redirect URIs and AUTH_URL are built for app.overflow.local.
+    'Client app'       = 'http://app.overflow.local/questions'
+    'Client app (port)'= 'http://localhost:4000/questions'
 }
 
 function Write-Step($message) { Write-Host "==> $message" -ForegroundColor Cyan }
@@ -88,15 +94,20 @@ function Assert-Prerequisites {
         Write-Warn "$($empty.Count) MinIO value(s) are empty in infra/.env - image upload will fail with InvalidAccessKeyId. Fill them from the AppHost user secrets."
     }
 
-    foreach ($image in $serviceImages.Keys) {
+    foreach ($image in @($serviceImages.Keys) + @($webappImage -replace ':latest', '')) {
         & docker image inspect "$($image):latest" *> $null
         if ($LASTEXITCODE -ne 0) {
             Write-Warn "Image '$image:latest' is missing - run '.\scripts\overflow.ps1 build'."
         }
     }
 
+    # aspire publish leaves this one empty, and compose would then start webapp on no image at all.
+    if (Select-String -Path $envFile -Pattern '^WEBAPP_IMAGE=\s*$' -ErrorAction SilentlyContinue) {
+        Write-Warn "WEBAPP_IMAGE is empty in infra/.env - set it to '$webappImage'."
+    }
+
     $hosts = Get-Content "$env:SystemRoot\System32\drivers\etc\hosts" -ErrorAction SilentlyContinue
-    foreach ($name in @('api.overflow.local', 'id.overflow.local')) {
+    foreach ($name in @('api.overflow.local', 'id.overflow.local', 'app.overflow.local')) {
         if (-not ($hosts | Select-String -SimpleMatch $name -Quiet)) {
             Write-Warn "'$name' is not in your hosts file - nginx-proxy routes by Host header, so Keycloak and the gateway will not resolve."
         }
@@ -187,7 +198,7 @@ function Show-Status {
 
     if (-not ($containers | Where-Object { $_.Service -eq 'webapp' })) {
         Write-Host ''
-        Write-Warn "The client app is not part of the compose file yet (it needs PublishAsDockerFile, which section 11 covers). Use '.\scripts\overflow.ps1 web' to run it with npm."
+        Write-Warn "No webapp container: run 'publish' to regenerate the compose file, then 'build' and 'start'. '.\scripts\overflow.ps1 web' runs the client with npm instead."
     }
 }
 
@@ -199,6 +210,13 @@ switch ($Command) {
                 -p:ContainerRepository=$($entry.Key) -p:ContainerImageTag=latest
             if ($LASTEXITCODE -ne 0) { throw "Build of $($entry.Key) failed" }
         }
+
+        # The client app builds from webapp/Dockerfile, which runs npm run build inside the image -
+        # so .env.production has to be filled in, or the build fails on a missing variable.
+        Write-Step "Building image $webappImage"
+        & docker build -t $webappImage $webapp
+        if ($LASTEXITCODE -ne 0) { throw 'Build of the client app image failed' }
+
         Write-Host 'Images built. Run "start" to pick them up.' -ForegroundColor Green
     }
 

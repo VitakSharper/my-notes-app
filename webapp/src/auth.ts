@@ -10,8 +10,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     // for so the refresh token outlives the Keycloak SSO session.
     Keycloak({
       authorization: {
+        // The browser follows this one, so it has to be the externally reachable issuer.
+        url: `${authConfig.kcIssuer}/protocol/openid-connect/auth`,
         params: { scope: "openid profile email offline_access" },
       },
+      // These two are server to server, with no browser involved: under Docker Compose the app
+      // has to call Keycloak by its service name, since id.overflow.local only resolves on the
+      // host. The issuer stays the external one, which is what the tokens are checked against.
+      token: `${authConfig.kcIssuerInternal}/protocol/openid-connect/token`,
+      userinfo: `${authConfig.kcIssuerInternal}/protocol/openid-connect/userinfo`,
     }),
   ],
   callbacks: {
@@ -43,7 +50,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Expired: trade the refresh token for a new pair. Auth.js has no built-in rotation yet.
       try {
         const response = await fetch(
-          `${authConfig.kcIssuer}/protocol/openid-connect/token`,
+          // Internal issuer again: the rotation is a server-side call.
+          `${authConfig.kcIssuerInternal}/protocol/openid-connect/token`,
           {
             method: "POST",
             headers: {

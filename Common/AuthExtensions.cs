@@ -22,7 +22,9 @@ public static class AuthExtensions
                     [
                         "http://localhost:6001/realms/overflow",      // From host machine (Postman)
                         "http://keycloak:8080/realms/overflow",       // Internal Docker network
-                        "http://id.overflow.local/realms/overflow"
+                        "http://id.overflow.local/realms/overflow",   // Through nginx-proxy
+                        // What Keycloak stamps once KC_HOSTNAME is the HTTPS proxy URL.
+                        "https://id.overflow.local/realms/overflow"
                     ]
                 };
             });

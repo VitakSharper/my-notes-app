@@ -15,6 +15,12 @@ var keycloak = builder.AddKeycloak("keycloak", 6001)
     .WithEnvironment("KC_HTTP_ENABLED", "true")
     .WithEnvironment("KC_HOSTNAME_STRICT", "false")
     .WithEnvironment("KC_PROXY_HEADERS", "xforwarded")
+    // Pins the frontend URL, so a token minted through the internal keycloak:8080 endpoint still
+    // carries iss = id.overflow.local. Without it Keycloak derives the issuer from the request
+    // host, and Auth.js rejects the id_token it gets back from the server-to-server exchange.
+    // Backchannel dynamic is what keeps that internal call legal while the hostname is a full URL.
+    .WithEnvironment("KC_HOSTNAME", "https://id.overflow.local")
+    .WithEnvironment("KC_HOSTNAME_BACKCHANNEL_DYNAMIC", "true")
     .WithEnvironment("VIRTUAL_HOST", "id.overflow.local")
     .WithEnvironment("VIRTUAL_PORT", "8080");
 //.WithEndpoint(port: 6001, targetPort: 8080, isExternal: true);
@@ -50,7 +56,12 @@ var minio = builder.AddContainer("minio", "minio/minio", "RELEASE.2025-04-22T22-
     // without it Aspire only writes `expose`, and the browser could not load an image.
     .WithEndpoint(port: 9000, targetPort: 9000, scheme: "http", name: "minio", isExternal: true)
     .WithEndpoint(port: 9001, targetPort: 9001, scheme: "http", name: "minio-console",
-        isExternal: true);
+        isExternal: true)
+    // The images are loaded by the browser, so once the client app is served over HTTPS they have
+    // to be too, or they count as mixed content and get blocked. Behind the proxy for that reason
+    // (the course keeps Cloudinary here, which is HTTPS already).
+    .WithEnvironment("VIRTUAL_HOST", "minio.overflow.local")
+    .WithEnvironment("VIRTUAL_PORT", "9000");
 
 var minioEndpoint = minio.GetEndpoint("minio");
 
@@ -108,8 +119,31 @@ var webApp = builder.AddJavaScriptApp("webapp", "../webapp")
     .WithEnvironment("MINIO_ACCESS_KEY", minioUser)
     .WithEnvironment("MINIO_SECRET_KEY", minioPassword)
     .WithEnvironment("MINIO_BUCKET", "overflow")
-    .WithEnvironment("NEXT_PUBLIC_IMAGE_BASE_URL", "http://localhost:9000/overflow")
-    .WithHttpEndpoint(port: 3000, env: "PORT");
+    // The URL the browser uses. The client bundle inlines it at build time from .env.production,
+    // but storage.ts reads it again server-side to build the URL it stores in the question HTML -
+    // so the value injected here has to match, or uploads would come back over plain HTTP and the
+    // HTTPS page would refuse to display them.
+    .WithEnvironment("NEXT_PUBLIC_IMAGE_BASE_URL", builder.ExecutionContext.IsPublishMode
+        ? "https://minio.overflow.local/overflow"
+        : "http://localhost:9000/overflow")
+    // nginx-proxy fronts the client app like it fronts the gateway and Keycloak. VIRTUAL_PORT is
+    // the port inside the container, which the Dockerfile fixes at 3000.
+    .WithEnvironment("VIRTUAL_HOST", "app.overflow.local")
+    .WithEnvironment("VIRTUAL_PORT", "3000");
+
+if (builder.ExecutionContext.IsPublishMode)
+{
+    // Compose only: the image built from webapp/Dockerfile runs the standalone server, and Aspire
+    // passes PORT so it binds the target port. Published on 4000 rather than 3000 so a `next dev`
+    // on the host keeps its usual port free.
+    webApp.WithEndpoint(port: 4000, targetPort: 3000, scheme: "http", name: "http", env: "PORT",
+            isExternal: true)
+        .PublishAsDockerFile();
+}
+else
+{
+    webApp.WithHttpEndpoint(port: 3000, env: "PORT");
+}
 
 // nginx-proxy watches the Docker socket and auto-generates a reverse proxy config for every
 // container exposing VIRTUAL_HOST. Docker Compose only - Aspire orchestrates itself in development.
@@ -117,7 +151,14 @@ if (!builder.Environment.IsDevelopment())
 {
     builder.AddContainer("nginx-proxy", "nginxproxy/nginx-proxy", "1.8")
         .WithEndpoint(port: 80, targetPort: 80, scheme: "http", name: "nginx", isExternal: true)
-        .WithBindMount("/var/run/docker.sock", "/tmp/docker.sock", isReadOnly: true);
+        // Two endpoints cannot share a name, hence nginx-ssl. SSL terminates here; everything
+        // behind the proxy stays on plain HTTP inside the compose network.
+        .WithEndpoint(port: 443, targetPort: 443, scheme: "https", name: "nginx-ssl",
+            isExternal: true)
+        .WithBindMount("/var/run/docker.sock", "/tmp/docker.sock", isReadOnly: true)
+        // mkcert-issued certificate. nginx-proxy drops the leftmost label when looking for a cert,
+        // so overflow.local.crt serves app., api., id. and minio.overflow.local alike.
+        .WithBindMount("../Overflow.AppHost/infra/dev-certs", "/etc/nginx/certs", isReadOnly: true);
 }
 
 builder.Build().Run();

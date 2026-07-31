@@ -19,7 +19,12 @@ function getEnv(name: string) {
 }
 
 export const authConfig = {
+  // Two issuers on purpose: the browser is redirected to the first one, while the token and
+  // userinfo calls the server makes go through the second. Under Docker Compose they differ -
+  // id.overflow.local resolves through nginx-proxy on the host, keycloak:8080 on the container
+  // network - and in development both are the same host.
   kcIssuer: getEnv("AUTH_KEYCLOAK_ISSUER"),
+  kcIssuerInternal: getEnv("AUTH_KEYCLOAK_ISSUER_INTERNAL"),
   kcClientId: getEnv("AUTH_KEYCLOAK_ID"),
   kcSecret: getEnv("AUTH_KEYCLOAK_SECRET"),
   secret: getEnv("AUTH_SECRET"),
