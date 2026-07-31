@@ -41,6 +41,34 @@ export async function postAnswer(data: AnswerSchema, questionId: string) {
   return result;
 }
 
+// Both answer mutations answer 204, so there is no payload to hand back - only the error.
+export async function updateAnswer(
+  data: AnswerSchema,
+  questionId: string,
+  answerId: string,
+) {
+  const result = await fetchClient(
+    `/questions/${questionId}/answers/${answerId}`,
+    "PUT",
+    { body: data },
+  );
+
+  if (!result.error) revalidatePath(`/questions/${questionId}`);
+
+  return result;
+}
+
+export async function deleteAnswer(questionId: string, answerId: string) {
+  const result = await fetchClient(
+    `/questions/${questionId}/answers/${answerId}`,
+    "DELETE",
+  );
+
+  if (!result.error) revalidatePath(`/questions/${questionId}`);
+
+  return result;
+}
+
 export async function deleteQuestion(id: string) {
   return fetchClient(`/questions/${id}`, "DELETE");
 }
