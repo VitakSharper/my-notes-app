@@ -45,6 +45,7 @@ $project = 'overflow'
 $serviceImages = @{
     'question-svc' = Join-Path $repoRoot 'QuestionService/QuestionService.csproj'
     'search-svc'   = Join-Path $repoRoot 'SearchService/SearchService.csproj'
+    'profile-svc'  = Join-Path $repoRoot 'ProfileService/ProfileService.csproj'
 }
 
 $webappImage = 'webapp:latest'

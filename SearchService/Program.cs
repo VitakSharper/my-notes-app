@@ -15,11 +15,6 @@ builder.AddServiceDefaults();
 
 await builder.UseWolverineWithRabbitMqAsync(options =>
 {
-    options.ListenToRabbitQueue("questions.search", cfg =>
-    {
-        cfg.BindExchange("questions");
-    });
-
     options.ApplicationAssembly = typeof(Program).Assembly;
 });
 

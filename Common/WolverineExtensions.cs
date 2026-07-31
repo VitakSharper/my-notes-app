@@ -16,30 +16,38 @@ public static class WolverineExtensions
 {
     public static async Task UseWolverineWithRabbitMqAsync(this IHostApplicationBuilder builder, Action<WolverineOptions> configureMessaging)
     {
-        var retryPolicy = Policy
-            .Handle<BrokerUnreachableException>()
-            .Or<SocketException>()
-            .WaitAndRetryAsync(10, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                (exception, timeSpan, retryCount, context) =>
-                {
-                    Console.WriteLine($"[RabbitMQ] Retry {retryCount}/10 - {exception.GetType().Name}. Waiting {timeSpan.TotalSeconds:F0}s before next retry...");
-                });
+        // The EF tools boot the app to find the DbContext, and waiting on a broker that is not
+        // running would make `dotnet ef migrations add` fail with an unrelated error.
+        var isEfDesignTime = AppDomain.CurrentDomain.FriendlyName
+            .StartsWith("ef", StringComparison.OrdinalIgnoreCase);
 
-        await retryPolicy.ExecuteAsync(async () =>
+        if (!isEfDesignTime)
         {
-            var endpoint = builder.Configuration.GetConnectionString("messaging")
-                           ?? throw new InvalidOperationException("RabbitMQ connection string not found.");
+            var retryPolicy = Policy
+                .Handle<BrokerUnreachableException>()
+                .Or<SocketException>()
+                .WaitAndRetryAsync(10, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                    (exception, timeSpan, retryCount, context) =>
+                    {
+                        Console.WriteLine($"[RabbitMQ] Retry {retryCount}/10 - {exception.GetType().Name}. Waiting {timeSpan.TotalSeconds:F0}s before next retry...");
+                    });
 
-            Console.WriteLine($"[RabbitMQ] Attempting to connect to: {endpoint}");
-
-            var factory = new ConnectionFactory()
+            await retryPolicy.ExecuteAsync(async () =>
             {
-                Uri = new Uri(endpoint)
-            };
+                var endpoint = builder.Configuration.GetConnectionString("messaging")
+                               ?? throw new InvalidOperationException("RabbitMQ connection string not found.");
 
-            await using var connection = await factory.CreateConnectionAsync();
-            Console.WriteLine("[RabbitMQ] Connection successful!");
-        });
+                Console.WriteLine($"[RabbitMQ] Attempting to connect to: {endpoint}");
+
+                var factory = new ConnectionFactory()
+                {
+                    Uri = new Uri(endpoint)
+                };
+
+                await using var connection = await factory.CreateConnectionAsync();
+                Console.WriteLine("[RabbitMQ] Connection successful!");
+            });
+        }
 
         builder.Services.AddOpenTelemetry().WithTracing(traceProviderBuilder =>
         {
@@ -50,9 +58,12 @@ public static class WolverineExtensions
 
         builder.UseWolverine(options =>
         {
+            // Conventional routing instead of hand-declared exchanges and queues: Wolverine derives
+            // the topology from the message types it finds, so a new service only has to say where
+            // its handlers live. AutoProvision then creates whatever that convention implies.
             options.UseRabbitMqUsingNamedConnection("messaging")
                 .AutoProvision()
-                .DeclareExchange("questions");
+                .UseConventionalRouting();
 
             configureMessaging(options);
         });

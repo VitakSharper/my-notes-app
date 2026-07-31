@@ -19,10 +19,11 @@ builder.Services.AddKeyClockAuthentication();
 
 builder.AddSqlServerDbContext<QuestionDbContext>("questionDb");
 
+// Conventional routing decides where messages go, so the only thing left to say is where the
+// handlers are.
 await builder.UseWolverineWithRabbitMqAsync(options =>
 {
-    options.PublishAllMessages().ToRabbitExchange("questions");
-    options.ApplicationAssembly= typeof(Program).Assembly;
+    options.ApplicationAssembly = typeof(Program).Assembly;
 });
 
 builder.Services.AddQuestionServices();
