@@ -1,6 +1,5 @@
 "use client";
 
-import RichTextEditor from "@/components/editor/rich-text-editor";
 import {
   postQuestion,
   updateQuestion,
@@ -19,9 +18,23 @@ import { Input } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
 import { handleError } from "@/lib/util";
 import clsx from "clsx";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
+
+// tiptap and its ProseMirror dependencies are the heaviest thing on this route, and nobody needs
+// them until the form is on screen: loading the editor on demand keeps them out of the initial
+// bundle. ssr: false because it renders nothing on the server anyway (immediatelyRender: false).
+const RichTextEditor = dynamic(
+  () => import("@/components/editor/rich-text-editor"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-60 w-full rounded-xl bg-default-100 animate-pulse" />
+    ),
+  },
+);
 
 type Props = {
   // Present when the form is used to edit; absent when asking a new question.

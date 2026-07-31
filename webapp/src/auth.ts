@@ -1,11 +1,13 @@
+import { authConfig } from "@/lib/config";
 import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     // The provider needs no credentials: Auth.js reads AUTH_KEYCLOAK_ID, AUTH_KEYCLOAK_SECRET
-    // and AUTH_KEYCLOAK_ISSUER from the environment by convention. offline_access is asked for
-    // so the refresh token outlives the Keycloak SSO session.
+    // and AUTH_KEYCLOAK_ISSUER from the environment by convention - importing authConfig is what
+    // makes their absence a startup error rather than a puzzling redirect. offline_access is asked
+    // for so the refresh token outlives the Keycloak SSO session.
     Keycloak({
       authorization: {
         params: { scope: "openid profile email offline_access" },
@@ -41,7 +43,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Expired: trade the refresh token for a new pair. Auth.js has no built-in rotation yet.
       try {
         const response = await fetch(
-          `${process.env.AUTH_KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
+          `${authConfig.kcIssuer}/protocol/openid-connect/token`,
           {
             method: "POST",
             headers: {
@@ -49,8 +51,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
             body: new URLSearchParams({
               grant_type: "refresh_token",
-              client_id: process.env.AUTH_KEYCLOAK_ID!,
-              client_secret: process.env.AUTH_KEYCLOAK_SECRET!,
+              client_id: authConfig.kcClientId,
+              client_secret: authConfig.kcSecret,
               refresh_token: token.refreshToken,
             }),
           },

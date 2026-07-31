@@ -6,24 +6,24 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { storageConfig } from "@/lib/config";
 
 /**
  * Image storage on MinIO, the S3-compatible container the AppHost starts. This stands in for the
  * course's Cloudinary account and keeps the same contract: an upload returns a public URL plus a
  * key ("publicId") the delete path can use later.
  */
-const bucket = process.env.MINIO_BUCKET ?? "overflow";
-const publicBaseUrl =
-  process.env.NEXT_PUBLIC_IMAGE_BASE_URL ?? `http://localhost:9000/${bucket}`;
+const bucket = storageConfig.bucket;
+const publicBaseUrl = storageConfig.publicBaseUrl;
 
 // forcePathStyle is required: MinIO serves buckets as /bucket/key, not as a subdomain.
 const client = new S3Client({
-  endpoint: process.env.MINIO_ENDPOINT ?? "http://localhost:9000",
+  endpoint: storageConfig.endpoint,
   region: "us-east-1",
   forcePathStyle: true,
   credentials: {
-    accessKeyId: process.env.MINIO_ACCESS_KEY ?? "",
-    secretAccessKey: process.env.MINIO_SECRET_KEY ?? "",
+    accessKeyId: storageConfig.accessKey,
+    secretAccessKey: storageConfig.secretKey,
   },
 });
 

@@ -1,6 +1,5 @@
 "use client";
 
-import RichTextEditor from "@/components/editor/rich-text-editor";
 import { postAnswer, updateAnswer } from "@/lib/actions/question-actions";
 import { useAnswerStore } from "@/lib/hooks/use-answer-store";
 import {
@@ -11,8 +10,20 @@ import {
 import { handleError } from "@/lib/util";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@heroui/button";
+import dynamic from "next/dynamic";
 import { useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
+
+// Same deferred editor as the question form: tiptap stays out of the question page bundle.
+const RichTextEditor = dynamic(
+  () => import("@/components/editor/rich-text-editor"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-60 w-full rounded-xl bg-default-100 animate-pulse" />
+    ),
+  },
+);
 
 type Props = {
   questionId: string;

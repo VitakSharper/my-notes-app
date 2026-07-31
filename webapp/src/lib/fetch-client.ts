@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { apiConfig } from "@/lib/config";
 import { ApiResponse } from "@/lib/types";
 import { notFound } from "next/navigation";
 
@@ -11,8 +12,8 @@ type FetchOptions = Omit<RequestInit, "body"> & { body?: unknown };
 /**
  * Thin wrapper around the fetch that Next.js extends, used by the server actions.
  *
- * GATEWAY_URL is injected by the Aspire AppHost (host URL in development, http://gateway:8001
- * under Docker Compose); API_URL from .env.local is the fallback when the app runs standalone.
+ * The base URL comes from lib/config: GATEWAY_URL when the AppHost injects it, API_URL from the
+ * env files otherwise.
  *
  * Errors are returned rather than thrown, except for the two cases where a page transition is
  * the only sensible outcome: 404 goes to the not-found page and 500 to the error boundary.
@@ -24,9 +25,7 @@ export async function fetchClient<T>(
 ): Promise<ApiResponse<T>> {
   const { body, ...rest } = options;
 
-  const apiUrl = process.env.GATEWAY_URL ?? process.env.API_URL;
-
-  if (!apiUrl) throw new Error("Missing API URL");
+  const apiUrl = apiConfig.baseUrl;
 
   const session = await auth();
 

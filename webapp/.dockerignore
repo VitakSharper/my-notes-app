@@ -1,0 +1,18 @@
+# The build runs npm ci from the lockfile, so a host node_modules would only invalidate the cache
+# (and carry Windows binaries into a linux image).
+node_modules
+.next
+npm-debug.log*
+
+# Development-only values: .env.production is deliberately not ignored, the build inlines the
+# NEXT_PUBLIC_ variables it holds.
+.env*.local
+
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md
+AGENTS.md
+CLAUDE.md
+*.tsbuildinfo

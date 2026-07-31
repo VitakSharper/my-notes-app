@@ -8,15 +8,13 @@ export async function testAuth() {
   return fetchClient<string>("/test/auth", "GET");
 }
 
+/**
+ * No try/catch around auth(): reading the cookies during a build throws a DynamicServerError on
+ * purpose, which is how Next.js learns the route is dynamic. Catching it and logging it is what
+ * filled the build output with "Dynamic server usage" dumps.
+ */
 export async function getCurrentUser() {
-  try {
-    const session = await auth();
+  const session = await auth();
 
-    if (!session) return null;
-
-    return session.user;
-  } catch (error: unknown) {
-    console.log(error);
-    return null;
-  }
+  return session?.user ?? null;
 }

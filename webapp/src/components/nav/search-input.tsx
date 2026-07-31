@@ -6,6 +6,7 @@ import { handleError } from "@/lib/util";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
 import { Input } from "@heroui/input";
 import { Listbox, ListboxItem } from "@heroui/listbox";
+import { Spinner } from "@heroui/spinner";
 import { useEffect, useState } from "react";
 
 export default function SearchInput() {
@@ -56,6 +57,9 @@ export default function SearchInput() {
     <div className="flex flex-col w-full relative ml-6">
       <Input
         startContent={<MagnifyingGlassIcon className="size-6" />}
+        // The debounce means a search fires 300ms after the last keystroke; the spinner is what
+        // says so, instead of the box looking idle while the request is in flight.
+        endContent={loading && <Spinner size="sm" />}
         type="search"
         placeholder="Search"
         value={query}
