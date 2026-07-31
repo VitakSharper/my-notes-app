@@ -17,6 +17,14 @@ export function errorToast(error: ApiError) {
   });
 }
 
+export function successToast(message: string, title?: string) {
+  return addToast({
+    color: "success",
+    title: title ?? "Success",
+    description: message,
+  });
+}
+
 /**
  * Default handling for an error a client component gets back from a server action: a toast,
  * except for a server error, which belongs on the error boundary.

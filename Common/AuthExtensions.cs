@@ -15,6 +15,9 @@ public static class AuthExtensions
                 options.Audience = "overflow";
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
+                    // Default is a 5 minute grace period, which would keep expired tokens working
+                    // long after Keycloak considers them dead.
+                    ClockSkew = TimeSpan.Zero,
                     ValidIssuers =
                     [
                         "http://localhost:6001/realms/overflow",      // From host machine (Postman)

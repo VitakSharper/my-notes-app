@@ -81,7 +81,16 @@ gitignored:
 
 ```
 API_URL=http://localhost:8001
+AUTH_URL=http://localhost:3000
+AUTH_SECRET=<openssl rand -base64 32>
+AUTH_KEYCLOAK_ID=nextjs
+AUTH_KEYCLOAK_SECRET=<the nextjs client secret from Keycloak>
+AUTH_KEYCLOAK_ISSUER=http://localhost:6001/realms/overflow
 ```
+
+Under Docker Compose the issuer is `http://id.overflow.local/realms/overflow` instead, since
+Keycloak publishes no host port there. Note that `npx auth secret` now resolves to an unrelated
+package on npm and writes a `BETTER_AUTH_SECRET`; generate `AUTH_SECRET` yourself.
 
 ## Running on Docker Compose
 
@@ -120,6 +129,17 @@ The `overflow` realm is imported automatically from `Overflow.AppHost/infra/real
 the `keycloak-data` volume is created: public client `postman` and users `admin`, `bob`, `dave`.
 Passwords live in `Overflow.AppHost/infra/.env`. Postman collections live outside this repo, in
 `OverflowAssets/postman`.
+
+Two things are **not** in that import and live only in the `keycloak-data` volume, so deleting it
+means recreating them:
+
+- the confidential client `nextjs` used by the web app (root URL `http://localhost:3000`, redirect
+  `/*`, an `oidc-audience-mapper` adding the `overflow` audience, and `Full scope allowed` off).
+  Its secret goes into `webapp/.env.local` as `AUTH_KEYCLOAK_SECRET` - it is deliberately kept out
+  of the realm file, which is committed;
+- the permanent master-realm admin `kc-admin`, which replaced the temporary bootstrap admin.
+
+User registration is enabled on the realm, which is what makes the Register button work.
 
 ## Client app (Cairn)
 

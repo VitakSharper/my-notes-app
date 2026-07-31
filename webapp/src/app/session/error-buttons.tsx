@@ -26,7 +26,8 @@ export default function ErrorButtons() {
   };
 
   return (
-    <div className="flex gap-6 items-center mt-6 w-full justify-center">
+    // The session page owns the layout now, so this only spaces its own buttons.
+    <div className="flex gap-3">
       {codes.map((code) => (
         <Button
           key={code}
