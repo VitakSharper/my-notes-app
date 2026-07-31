@@ -22,9 +22,9 @@ export default function UserMenu({ user }: Props) {
           <Avatar
             color="secondary"
             size="sm"
-            name={user.name?.charAt(0) ?? "?"}
+            name={user.displayName?.charAt(0) ?? "?"}
           />
-          {user.name}
+          {user.displayName}
         </div>
       </DropdownTrigger>
       <DropdownMenu aria-label="user menu">

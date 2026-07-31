@@ -1,4 +1,4 @@
-import { authConfig } from "@/lib/config";
+import { apiConfig, authConfig } from "@/lib/config";
 import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
 
@@ -29,6 +29,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // askerId only ever arrives on the profile, which is populated at sign-in.
       if (profile?.sub) {
         token.sub = profile.sub;
+      }
+
+      // Sign-in is also the moment to reach the profile service: the call creates the profile row
+      // if this is a first visit (its middleware does that from the token claims) and hands back
+      // the display name and reputation the UI shows. Keycloak only knows the identity.
+      if (account?.access_token) {
+        const response = await fetch(`${apiConfig.baseUrl}/profiles/me`, {
+          headers: { Authorization: `Bearer ${account.access_token}` },
+        });
+
+        if (response.ok) {
+          token.user = await response.json();
+        } else {
+          console.error(
+            "Failed to fetch user profile:",
+            response.status,
+            await response.text(),
+          );
+        }
       }
 
       // `account` is only populated on the sign-in call - the one and only moment Keycloak hands
@@ -92,8 +111,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.accessToken = token.accessToken;
       }
 
+      // The profile service is what the app renders from. The token subject stays a fallback for
+      // the id, so ownership checks keep working even if that call failed at sign-in.
+      if (token.user) {
+        session.user = { ...session.user, ...token.user };
+      }
+
       if (token.sub) {
-        session.user.id = token.sub;
+        session.user.id ??= token.sub;
       }
 
       if (token.accessTokenExpires) {

@@ -39,6 +39,22 @@ export type SearchQuestion = {
   answerCount: number;
 };
 
+/** What GET /profiles/me returns: the profile service's view of a user. */
+export type UserProfile = {
+  id: string;
+  displayName: string;
+  description: string | null;
+  joinedAt: string;
+  reputation: number;
+};
+
+/** The slice GET /profiles/batch returns, used to enrich questions and answers. */
+export type ProfileSummary = {
+  userId: string;
+  displayName: string;
+  reputation: number;
+};
+
 export type Tag = {
   id: string;
   name: string;
