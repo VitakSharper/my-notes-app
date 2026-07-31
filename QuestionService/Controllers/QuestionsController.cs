@@ -38,12 +38,11 @@ public class QuestionsController(
         if (question is null)
             return NotFound($"Question with id '{id}' was not found.");
 
+        await repository.IncrementViewCountAsync(id, ct);
+
+        // The bulk update bypasses the change tracker, so the instance we are about to return
+        // still holds the pre-increment value.
         question.ViewCount++;
-        await repository.UpdateAsync(id, q =>
-        {
-            q.ViewCount = question.ViewCount;
-            return q;
-        }, ct);
 
         return Ok(question);
     }

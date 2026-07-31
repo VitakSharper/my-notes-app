@@ -1,17 +1,22 @@
+import { errorToast } from "@/lib/util";
 import {
   BoldIcon,
   CodeBracketIcon,
   ItalicIcon,
+  PhotoIcon,
   StrikethroughIcon,
 } from "@heroicons/react/20/solid";
 import { Button } from "@heroui/button";
 import { Editor, useEditorState } from "@tiptap/react";
+import { ChangeEvent, useRef, useState } from "react";
 
 type Props = {
   editor: Editor | null;
 };
 
 export default function MenuBar({ editor }: Props) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   // useEditorState is what makes React track the marks under the cursor, so the buttons can
   // show as pressed.
   const editorState = useEditorState({
@@ -64,6 +69,41 @@ export default function MenuBar({ editor }: Props) {
     },
   ];
 
+  const onFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    // Reset straight away so picking the same file twice still fires a change event.
+    event.target.value = "";
+
+    if (!file) return;
+
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/images", {
+        method: "POST",
+        body: formData,
+      });
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        errorToast({
+          message: body.message ?? "Upload failed",
+          status: response.status,
+        });
+        return;
+      }
+
+      editor.chain().focus().setImage({ src: body.url, alt: file.name }).run();
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="rounded space-x-1 pb-1 z-50">
       {options.map((option, index) => (
@@ -80,6 +120,25 @@ export default function MenuBar({ editor }: Props) {
           {option.icon}
         </Button>
       ))}
+      {/* The image extension only renders <img>; the file has to reach storage some other way,
+          which is what this button and /api/images do. */}
+      <Button
+        type="button"
+        radius="sm"
+        size="sm"
+        isIconOnly
+        isLoading={uploading}
+        onPress={() => fileInputRef.current?.click()}
+      >
+        <PhotoIcon className="w-5 h-5" />
+      </Button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onFileSelected}
+      />
     </div>
   );
 }

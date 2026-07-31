@@ -1,4 +1,5 @@
 import MenuBar from "@/components/editor/menu-bar";
+import Image from "@tiptap/extension-image";
 import StarterKit from "@tiptap/starter-kit";
 import { EditorContent, useEditor } from "@tiptap/react";
 import clsx from "clsx";
@@ -18,7 +19,9 @@ export default function RichTextEditor({
   errorMessage,
 }: Props) {
   const editor = useEditor({
-    extensions: [StarterKit],
+    // StarterKit has no image support. This extension only renders <img> tags; getting a file
+    // into storage and a URL back is our job (see the upload button in the menu bar).
+    extensions: [StarterKit, Image],
     content: value,
     // Required in the app router: rendering on the first pass causes a hydration mismatch.
     immediatelyRender: false,

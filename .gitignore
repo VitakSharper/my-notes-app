@@ -17,3 +17,12 @@
 
 # local env files
 .env.local
+
+# generated compose env: holds the container passwords in clear text
+/Overflow.AppHost/infra/.env
+/Overflow.AppHost/infra/.env.Production
+
+# npm never belongs at the repo root: the client app has its own package.json
+/node_modules/
+/package.json
+/package-lock.json

@@ -35,6 +35,25 @@ var typeSense = builder.AddContainer("typesense", "typesense/typesense", "29.0")
 
 var typeSenseContainer = typeSense.GetEndpoint("typesense");
 
+// S3-compatible object storage for the images pasted into the rich text editor. The course uses
+// Cloudinary; MinIO keeps the same shape (upload returns a URL plus a key we can delete by)
+// without an external account. Port 9000 is the S3 API, 9001 the web console.
+var minioUser = builder.AddParameter("minio-user");
+var minioPassword = builder.AddParameter("minio-password", secret: true);
+
+var minio = builder.AddContainer("minio", "minio/minio", "RELEASE.2025-04-22T22-12-26Z")
+    .WithArgs("server", "/data", "--console-address", ":9001")
+    .WithEnvironment("MINIO_ROOT_USER", minioUser)
+    .WithEnvironment("MINIO_ROOT_PASSWORD", minioPassword)
+    .WithVolume("minio-data", "/data")
+    // isExternal is what turns these into published host ports in the generated compose file:
+    // without it Aspire only writes `expose`, and the browser could not load an image.
+    .WithEndpoint(port: 9000, targetPort: 9000, scheme: "http", name: "minio", isExternal: true)
+    .WithEndpoint(port: 9001, targetPort: 9001, scheme: "http", name: "minio-console",
+        isExternal: true);
+
+var minioEndpoint = minio.GetEndpoint("minio");
+
 var questionDb = sql.AddDatabase("questionDb");
 
 var rabbitMq = builder.AddRabbitMQ("messaging")
@@ -83,6 +102,13 @@ var webApp = builder.AddJavaScriptApp("webapp", "../webapp")
     // Server-side fetches resolve the gateway through Aspire instead of a hardcoded URL:
     // http://localhost:8001 in development, http://gateway:8001 under Docker Compose.
     .WithEnvironment("GATEWAY_URL", yarp.GetEndpoint("gateway"))
+    // Image storage: the server side talks to MinIO through this endpoint, and the browser loads
+    // the images from the public one - the same URL while the client runs on the host.
+    .WithEnvironment("MINIO_ENDPOINT", minioEndpoint)
+    .WithEnvironment("MINIO_ACCESS_KEY", minioUser)
+    .WithEnvironment("MINIO_SECRET_KEY", minioPassword)
+    .WithEnvironment("MINIO_BUCKET", "overflow")
+    .WithEnvironment("NEXT_PUBLIC_IMAGE_BASE_URL", "http://localhost:9000/overflow")
     .WithHttpEndpoint(port: 3000, env: "PORT");
 
 // nginx-proxy watches the Docker socket and auto-generates a reverse proxy config for every

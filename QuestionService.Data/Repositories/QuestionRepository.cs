@@ -40,6 +40,16 @@ public sealed class QuestionRepository(QuestionDbContext context) : IQuestionRep
             null => null
         };
 
+    /// <summary>
+    /// Deliberately not routed through UpdateAsync: that stamps UpdatedAt, which would make every
+    /// reader of a question look like an editor. A single statement also removes the read-modify-
+    /// write race on concurrent views.
+    /// </summary>
+    public Task<int> IncrementViewCountAsync(string id, CancellationToken ct = default) =>
+        context.Questions
+            .Where(q => q.Id == id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(q => q.ViewCount, q => q.ViewCount + 1), ct);
+
     public async Task<bool> DeleteAsync(string id, CancellationToken ct = default) =>
         await context.Questions.FirstOrDefaultAsync(q => q.Id == id, ct) switch
         {

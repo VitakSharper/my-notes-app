@@ -17,6 +17,9 @@ public interface IQuestionRepository
     Task<Question> AddAsync(Question question, CancellationToken ct = default);
     
     Task<Question?> UpdateAsync(string id, Func<Question, Question> update, CancellationToken ct = default);
+
+    /// <summary>Increments ViewCount without touching UpdatedAt.</summary>
+    Task<int> IncrementViewCountAsync(string id, CancellationToken ct = default);
     
     Task<bool> DeleteAsync(string id, CancellationToken ct = default);
     
