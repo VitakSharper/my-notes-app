@@ -1,3 +1,4 @@
+import DeleteQuestionButton from "@/app/questions/[id]/delete-question-button";
 import LinkComponent from "@/components/link-component";
 import { getCurrentUser } from "@/lib/actions/auth-actions";
 import { Question } from "@/lib/types";
@@ -58,6 +59,7 @@ export default async function QuestionDetailedHeader({ question }: Props) {
             >
               edit
             </Button>
+            <DeleteQuestionButton questionId={question.id} />
           </div>
         )}
       </div>

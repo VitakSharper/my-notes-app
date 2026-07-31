@@ -23,6 +23,10 @@ export async function updateQuestion(question: QuestionSchema, id: string) {
   return fetchClient<Question>(`/questions/${id}`, "PUT", { body: question });
 }
 
+export async function deleteQuestion(id: string) {
+  return fetchClient(`/questions/${id}`, "DELETE");
+}
+
 // Goes to the SearchService (Typesense) through the gateway, not to the QuestionService.
 export async function searchQuestions(query: string) {
   return fetchClient<SearchQuestion[]>(
