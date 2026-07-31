@@ -35,6 +35,14 @@ export function handleError(error: ApiError) {
   return errorToast(error);
 }
 
+/**
+ * The rich text editor hands back HTML, so a length check has to count the text only: an empty
+ * editor still produces "<p></p>".
+ */
+export function stripHtmlTags(html: string) {
+  return html.replace(/<[^>]*>/g, "").trim();
+}
+
 /** Coarse "today / yesterday / 3 days ago" used on the question detail header. */
 export function fuzzyTimeAgo(date: string | Date) {
   const now = new Date();

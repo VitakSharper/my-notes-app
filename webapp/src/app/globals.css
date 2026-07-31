@@ -3,3 +3,8 @@
 @plugin './hero.ts';
 @source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
 @custom-variant dark (&:is(.dark *));
+
+/* Tiptap ships headless, but ProseMirror does set a focus outline of its own. */
+.ProseMirror:focus {
+  outline: none;
+}

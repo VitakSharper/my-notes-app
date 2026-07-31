@@ -1,15 +1,18 @@
 "use client";
 
+import RichTextEditor from "@/components/editor/rich-text-editor";
 import { useTagStore } from "@/lib/hooks/use-tag-store";
 import {
   QuestionSchema,
+  QuestionSchemaInput,
   questionSchema,
 } from "@/lib/schemas/question-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@heroui/button";
 import { Form } from "@heroui/form";
-import { Input, Textarea } from "@heroui/input";
+import { Input } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
+import clsx from "clsx";
 import { Controller, useForm } from "react-hook-form";
 
 export default function QuestionForm() {
@@ -20,7 +23,7 @@ export default function QuestionForm() {
     handleSubmit,
     control,
     formState: { isSubmitting, isValid, errors },
-  } = useForm<QuestionSchema>({
+  } = useForm<QuestionSchemaInput, unknown, QuestionSchema>({
     resolver: zodResolver(questionSchema),
     // onTouched validates on blur, so errors appear before the user hits submit.
     mode: "onTouched",
@@ -53,15 +56,34 @@ export default function QuestionForm() {
       </div>
       <div className="flex flex-col gap-3 w-full">
         <div className="text-2xl font-semibold">Body</div>
-        {/* Replaced by a rich text editor further into the section. */}
-        <Textarea
-          {...register("content")}
-          className="w-full"
-          label="Include all the information someone would need to answer your question"
-          labelPlacement="outside-top"
-          minRows={12}
-          isInvalid={!!errors.content}
-          errorMessage={errors.content?.message}
+        {/* The editor is controlled too: tiptap owns its own state, so the form gets the HTML
+            through onUpdate rather than through register. */}
+        <Controller
+          control={control}
+          name="content"
+          render={({ field: { onChange, onBlur, value }, fieldState }) => (
+            <>
+              <p
+                className={clsx("text-sm", {
+                  "text-danger": fieldState.error?.message,
+                })}
+              >
+                Include all the information someone would need to answer your
+                question
+              </p>
+              <RichTextEditor
+                onChange={onChange}
+                onBlur={onBlur}
+                value={value ?? ""}
+                errorMessage={fieldState.error?.message}
+              />
+              {fieldState.error?.message && (
+                <span className="text-xs text-danger -mt-1">
+                  {fieldState.error.message}
+                </span>
+              )}
+            </>
+          )}
         />
       </div>
       <div className="flex flex-col gap-3 w-full">
