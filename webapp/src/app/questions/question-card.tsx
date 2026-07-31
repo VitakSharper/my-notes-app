@@ -1,5 +1,5 @@
 import { Question } from "@/lib/types";
-import { timeAgo } from "@/lib/util";
+import { stripHtmlTags, timeAgo } from "@/lib/util";
 import { CheckIcon } from "@heroicons/react/24/outline";
 import { Avatar } from "@heroui/avatar";
 import { Chip } from "@heroui/chip";
@@ -48,10 +48,9 @@ export default function QuestionCard({ question }: Props) {
           >
             {question.title}
           </Link>
-          <div
-            className="line-clamp-2"
-            dangerouslySetInnerHTML={{ __html: question.content }}
-          />
+          {/* Text only on the card: rendering the HTML here would drop the embedded images into
+              the list. The full content is on the question page. */}
+          <div className="line-clamp-2">{stripHtmlTags(question.content)}</div>
         </div>
         <div className="flex justify-between pt-2">
           <div className="flex gap-2">

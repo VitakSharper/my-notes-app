@@ -66,9 +66,17 @@ export function extractPublicIdsFromHtml(html: string) {
 /**
  * The rich text editor hands back HTML, so a length check has to count the text only: an empty
  * editor still produces "<p></p>".
+ *
+ * Block boundaries become a space, otherwise the text of two blocks runs together
+ * ("process.envpassing it") when the result is displayed as a preview. Inline tags are removed
+ * without a space, so a <code> span keeps the punctuation that follows it attached.
  */
 export function stripHtmlTags(html: string) {
-  return html.replace(/<[^>]*>/g, "").trim();
+  return html
+    .replace(/<\/(p|div|li|ul|ol|h[1-6]|blockquote|pre|tr|td)>|<br\s*\/?>/gi, " ")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** Coarse "today / yesterday / 3 days ago" used on the question detail header. */
