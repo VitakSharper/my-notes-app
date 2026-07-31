@@ -95,6 +95,30 @@ package on npm and writes a `BETTER_AUTH_SECRET`; generate `AUTH_SECRET` yoursel
 
 ## Running on Docker Compose
 
+`scripts/overflow.ps1` wraps every compose invocation this project needs — they all have to run
+from `Overflow.AppHost/infra` (compose reads the `.env` next to the file) under the project name
+`overflow`, which is what the existing volumes are attached to.
+
+```powershell
+.\scripts\overflow.ps1 start      # up -d, then waits until keycloak, minio and the gateway answer
+.\scripts\overflow.ps1 status     # containers, published host ports and a health check per URL
+.\scripts\overflow.ps1 stop       # stops the containers, keeps them for a fast restart
+.\scripts\overflow.ps1 logs question-svc -Tail 100   # add -Follow to stream
+.\scripts\overflow.ps1 build      # rebuilds the question-svc and search-svc images
+.\scripts\overflow.ps1 publish    # regenerates the compose file from AppHost.cs
+.\scripts\overflow.ps1 down       # removes the containers, keeps the volumes
+```
+
+`start` also warns about the things that silently break this stack: a missing service image, empty
+MinIO values in `.env`, or the two missing hosts entries. Deleting the data takes
+`down -DestroyData` and a typed confirmation, because the volumes hold the Keycloak realm (the
+`nextjs` client and `kc-admin` are not in the realm import).
+
+The client app is not in the compose file yet — it needs `PublishAsDockerFile()`, which section 11
+of the course covers — so run it from your IDE or with `npm run dev`.
+
+### Doing it by hand
+
 `aspire publish` only renders the compose file; it does **not** build the service images, and there
 are no Dockerfiles (the .NET SDK builds the containers).
 
