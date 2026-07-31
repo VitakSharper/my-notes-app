@@ -1,4 +1,5 @@
 import AnswerContent from "@/app/questions/[id]/answer-content";
+import AnswerForm from "@/app/questions/[id]/answer-form";
 import AnswersHeader from "@/app/questions/[id]/answers-header";
 import QuestionContent from "@/app/questions/[id]/question-content";
 import QuestionDetailedHeader from "@/app/questions/[id]/question-detailed-header";
@@ -28,6 +29,7 @@ export default async function QuestionDetailedPage({
       {question.answers.map((answer) => (
         <AnswerContent answer={answer} key={answer.id} />
       ))}
+      <AnswerForm questionId={question.id} />
     </div>
   );
 }

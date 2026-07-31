@@ -1,21 +1,9 @@
-import { stripHtmlTags } from "@/lib/util";
+import { contentField } from "@/lib/schemas/content-field";
 import { z } from "zod";
 
 // Zod has no `required` helper: a trimmed string with a minimum of one is the idiom.
 const required = (name: string) =>
   z.string().trim().min(1, { message: `${name} is required` });
-
-// The editor starts out undefined and never returns plain text, so the content field accepts
-// undefined, normalises it, then validates the text with the tags stripped out.
-const contentField = z
-  .union([z.string(), z.undefined()])
-  .transform((value) => value ?? "")
-  .refine((value) => value.trim().length > 0, {
-    message: "Content is required",
-  })
-  .refine((value) => stripHtmlTags(value).length >= 10, {
-    message: "Content should be at least 10 characters",
-  });
 
 export const questionSchema = z.object({
   title: required("Title"),

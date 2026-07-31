@@ -70,11 +70,20 @@ export default function RichTextEditor({
   // current HTML keeps this a no-op while typing, and emitUpdate: false avoids feeding the value
   // straight back into the form.
   useEffect(() => {
-    if (editor && value && editor.getHTML() !== value) {
-      editor.commands.setContent(value, { emitUpdate: false });
-      // Seed the baseline as well, or the first image removed from a question being edited would
-      // not be seen as removed - setContent deliberately emits no update.
-      previousPublicIds.current = extractPublicIdsFromHtml(value);
+    if (!editor) return;
+
+    const next = value || "";
+    const current = editor.getHTML();
+    // An empty ProseMirror document serialises as <p></p>, never as "", so clearing the form has
+    // to be compared against that - otherwise a reset (posting an answer) leaves the text behind.
+    const alreadyEmpty = current === "<p></p>";
+
+    if (next === "" ? !alreadyEmpty : current !== next) {
+      editor.commands.setContent(next, { emitUpdate: false });
+      // Seed the baseline too, or the first image removed from a question being edited would not
+      // be seen as removed - setContent deliberately emits no update. After a reset this empties
+      // it, which is what keeps the images of a just-posted answer from being deleted.
+      previousPublicIds.current = extractPublicIdsFromHtml(next);
     }
   }, [editor, value]);
 

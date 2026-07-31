@@ -1,8 +1,9 @@
 "use server";
 
 import { fetchClient } from "@/lib/fetch-client";
+import { AnswerSchema } from "@/lib/schemas/answer-schema";
 import { QuestionSchema } from "@/lib/schemas/question-schema";
-import { Question, SearchQuestion } from "@/lib/types";
+import { Answer, Question, SearchQuestion } from "@/lib/types";
 
 export async function getQuestions(tag?: string) {
   const url = tag ? `/questions?tag=${tag}` : "/questions";
@@ -21,6 +22,12 @@ export async function postQuestion(question: QuestionSchema) {
 // The id travels separately: the schema describes the form fields, and has no id of its own.
 export async function updateQuestion(question: QuestionSchema, id: string) {
   return fetchClient<Question>(`/questions/${id}`, "PUT", { body: question });
+}
+
+export async function postAnswer(data: AnswerSchema, questionId: string) {
+  return fetchClient<Answer>(`/questions/${questionId}/answers`, "POST", {
+    body: data,
+  });
 }
 
 export async function deleteQuestion(id: string) {
