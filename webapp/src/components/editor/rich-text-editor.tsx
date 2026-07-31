@@ -2,8 +2,9 @@ import MenuBar from "@/components/editor/menu-bar";
 import Image from "@tiptap/extension-image";
 import StarterKit from "@tiptap/starter-kit";
 import { EditorContent, useEditor } from "@tiptap/react";
+import { extractPublicIdsFromHtml } from "@/lib/util";
 import clsx from "clsx";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 type Props = {
   onChange: (body: string) => void;
@@ -18,6 +19,9 @@ export default function RichTextEditor({
   value,
   errorMessage,
 }: Props) {
+  // The keys present at the previous update, to spot the ones the user just removed.
+  const previousPublicIds = useRef<string[]>([]);
+
   const editor = useEditor({
     // StarterKit has no image support. This extension only renders <img> tags; getting a file
     // into storage and a URL back is our job (see the upload button in the menu bar).
@@ -36,7 +40,29 @@ export default function RichTextEditor({
       },
     },
     onBlur: () => onBlur(),
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+
+      onChange(html);
+
+      // An image dropped from the editor would otherwise stay in storage forever. Diffing the
+      // keys on each update is cheap (getHTML is), but it is not exhaustive: an upload followed
+      // by closing the tab still leaves an orphan behind.
+      const currentPublicIds = extractPublicIdsFromHtml(html);
+      const removed = previousPublicIds.current.filter(
+        (publicId) => !currentPublicIds.includes(publicId),
+      );
+
+      removed.forEach((publicId) => {
+        void fetch("/api/images", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ publicId }),
+        });
+      });
+
+      previousPublicIds.current = currentPublicIds;
+    },
   });
 
   // `content` is only read when the editor is created, so an edit form - which resets its values
@@ -46,6 +72,9 @@ export default function RichTextEditor({
   useEffect(() => {
     if (editor && value && editor.getHTML() !== value) {
       editor.commands.setContent(value, { emitUpdate: false });
+      // Seed the baseline as well, or the first image removed from a question being edited would
+      // not be seen as removed - setContent deliberately emits no update.
+      previousPublicIds.current = extractPublicIdsFromHtml(value);
     }
   }, [editor, value]);
 

@@ -149,7 +149,9 @@ export default function QuestionForm({ questionToUpdate }: Props) {
               isClearable
               disallowEmptySelection
               items={tags}
-              selectedKeys={field.value ?? []}
+              // Waiting for the store avoids HeroUI's "selected keys are not in the collection"
+              // warning: in edit mode the slugs land before the tags do.
+              selectedKeys={tags.length > 0 ? (field.value ?? []) : []}
               onSelectionChange={(keys) => field.onChange(Array.from(keys))}
               onBlur={field.onBlur}
               isInvalid={fieldState.invalid}

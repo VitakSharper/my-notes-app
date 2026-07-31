@@ -35,6 +35,34 @@ export function handleError(error: ApiError) {
   return errorToast(error);
 }
 
+const imageBaseUrl =
+  process.env.NEXT_PUBLIC_IMAGE_BASE_URL ?? "http://localhost:9000/overflow";
+
+/**
+ * The keys of the images currently embedded in a piece of editor HTML, so removing an image from
+ * the editor can remove it from storage too.
+ *
+ * The course parses Cloudinary URLs (folder, version and upload segments) with a long regex; a
+ * MinIO URL is just the bucket base plus the key. Matching only our own base is also safer: an
+ * image pasted from elsewhere cannot produce a delete call.
+ */
+export function extractPublicIdsFromHtml(html: string) {
+  const publicIds: string[] = [];
+  const imageTags = /<img[^>]+src="([^">]+)"/g;
+
+  let match: RegExpExecArray | null;
+
+  while ((match = imageTags.exec(html)) !== null) {
+    const url = match[1];
+
+    if (url.startsWith(`${imageBaseUrl}/`)) {
+      publicIds.push(url.slice(imageBaseUrl.length + 1));
+    }
+  }
+
+  return publicIds;
+}
+
 /**
  * The rich text editor hands back HTML, so a length check has to count the text only: an empty
  * editor still produces "<p></p>".
