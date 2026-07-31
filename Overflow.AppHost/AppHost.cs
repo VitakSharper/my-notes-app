@@ -158,7 +158,12 @@ if (!builder.Environment.IsDevelopment())
         .WithBindMount("/var/run/docker.sock", "/tmp/docker.sock", isReadOnly: true)
         // mkcert-issued certificate. nginx-proxy drops the leftmost label when looking for a cert,
         // so overflow.local.crt serves app., api., id. and minio.overflow.local alike.
-        .WithBindMount("../Overflow.AppHost/infra/dev-certs", "/etc/nginx/certs", isReadOnly: true);
+        .WithBindMount("../Overflow.AppHost/infra/dev-certs", "/etc/nginx/certs", isReadOnly: true)
+        // Default would be to redirect every http request to https. Plain http has to keep working
+        // for the development client: `next dev` runs on the host, and Node's fetch ships its own
+        // CA bundle - it ignores the Windows store where the mkcert root lives, so it would refuse
+        // the certificate that the browser accepts.
+        .WithEnvironment("HTTPS_METHOD", "noredirect");
 }
 
 builder.Build().Run();

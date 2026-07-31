@@ -244,6 +244,8 @@ services:
       - "aspire"
   nginx-proxy:
     image: "nginxproxy/nginx-proxy:1.8"
+    environment:
+      HTTPS_METHOD: "noredirect"
     ports:
       - "80:80"
       - "443:443"
