@@ -37,7 +37,11 @@ export default async function QuestionDetailedPage({
         <AnswersHeader answerCount={question.answers.length} />
       )}
       {question.answers.map((answer) => (
-        <AnswerContent answer={answer} key={answer.id} />
+        <AnswerContent
+          answer={answer}
+          key={answer.id}
+          author={toAuthor(answer.authorId, answer.authorDisplayName, profiles)}
+        />
       ))}
       <AnswerForm questionId={question.id} />
     </div>

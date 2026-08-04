@@ -2,7 +2,7 @@
 
 import { deleteAnswer } from "@/lib/actions/question-actions";
 import { useAnswerStore } from "@/lib/hooks/use-answer-store";
-import { Answer } from "@/lib/types";
+import { Answer, Author } from "@/lib/types";
 import { handleError, timeAgo } from "@/lib/util";
 import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
@@ -14,9 +14,11 @@ type Props = {
   // Resolved by the answer content, which is a server component: there is no session provider on
   // the client, the session is read server-side and handed down.
   currentUser?: User | null;
+  // Same reason, same route: the profile service is the source of truth for the name.
+  author: Author;
 };
 
-export default function AnswerFooter({ answer, currentUser }: Props) {
+export default function AnswerFooter({ answer, currentUser, author }: Props) {
   const [pending, startTransition] = useTransition();
   const editableAnswer = useAnswerStore((state) => state.answer);
   const setAnswer = useAnswerStore((state) => state.setAnswer);
@@ -82,15 +84,19 @@ export default function AnswerFooter({ answer, currentUser }: Props) {
           answered {timeAgo(answer.createdAt)}
         </span>
         <div className="flex items-center gap-3">
-          {/* The API exposes authorDisplayName, not userDisplayName. */}
           <Avatar
             className="h-6 w-6"
             color="secondary"
-            name={answer.authorDisplayName.charAt(0)}
+            name={author.displayName.charAt(0)}
           />
           <div className="flex flex-col items-center">
-            <span>{answer.authorDisplayName}</span>
-            <span className="self-start text-sm font-semibold">42</span>
+            <span>{author.displayName}</span>
+            {/* Nothing rather than a 0 when the profile did not resolve. */}
+            {author.reputation !== null && (
+              <span className="self-start text-sm font-semibold">
+                {author.reputation}
+              </span>
+            )}
           </div>
         </div>
       </div>

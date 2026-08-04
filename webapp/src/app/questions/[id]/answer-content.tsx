@@ -1,13 +1,14 @@
 import AnswerFooter from "@/app/questions/[id]/answer-footer";
 import VotingButtons from "@/app/questions/[id]/voting-buttons";
 import { getCurrentUser } from "@/lib/actions/auth-actions";
-import { Answer } from "@/lib/types";
+import { Answer, Author } from "@/lib/types";
 
 type Props = {
   answer: Answer;
+  author: Author;
 };
 
-export default async function AnswerContent({ answer }: Props) {
+export default async function AnswerContent({ answer, author }: Props) {
   // Read here rather than in the footer: the footer needs client hooks, so it cannot await the
   // session itself.
   const currentUser = await getCurrentUser();
@@ -21,7 +22,11 @@ export default async function AnswerContent({ answer }: Props) {
           className="mt-4 ml-6 prose dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: answer.content }}
         />
-        <AnswerFooter answer={answer} currentUser={currentUser} />
+        <AnswerFooter
+          answer={answer}
+          currentUser={currentUser}
+          author={author}
+        />
       </div>
     </div>
   );
