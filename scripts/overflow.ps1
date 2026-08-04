@@ -107,10 +107,20 @@ function Assert-Prerequisites {
         Write-Warn "WEBAPP_IMAGE is empty in infra/.env - set it to '$webappImage'."
     }
 
+    # Every VIRTUAL_HOST in the compose file has to resolve on the host as well, minio included: the
+    # browser loads image URLs straight out of the question HTML, so a missing entry there breaks
+    # images only - no container complains, which is exactly why it is checked here.
+    $hostNames = [ordered]@{
+        'api.overflow.local'   = 'the gateway'
+        'id.overflow.local'    = 'Keycloak'
+        'app.overflow.local'   = 'the client app'
+        'minio.overflow.local' = 'the images in questions'
+    }
+
     $hosts = Get-Content "$env:SystemRoot\System32\drivers\etc\hosts" -ErrorAction SilentlyContinue
-    foreach ($name in @('api.overflow.local', 'id.overflow.local', 'app.overflow.local')) {
+    foreach ($name in $hostNames.Keys) {
         if (-not ($hosts | Select-String -SimpleMatch $name -Quiet)) {
-            Write-Warn "'$name' is not in your hosts file - nginx-proxy routes by Host header, so Keycloak and the gateway will not resolve."
+            Write-Warn "'$name' is not in your hosts file - nginx-proxy routes by Host header, so $($hostNames[$name]) will not resolve. Add '127.0.0.1 $name'."
         }
     }
 }
