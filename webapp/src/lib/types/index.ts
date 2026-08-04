@@ -55,6 +55,18 @@ export type ProfileSummary = {
   reputation: number;
 };
 
+/**
+ * What the author components render. The fallback is applied before it reaches them, so no
+ * component carries fallback logic of its own. A null reputation means the profile did not resolve
+ * - the footers then show nothing rather than a 0, which would be as untrue as the hardcoded 42 it
+ * replaces.
+ */
+export type Author = {
+  id: string;
+  displayName: string;
+  reputation: number | null;
+};
+
 export type Tag = {
   id: string;
   name: string;
