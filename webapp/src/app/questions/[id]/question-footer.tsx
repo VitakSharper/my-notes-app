@@ -1,14 +1,15 @@
 import LinkComponent from "@/components/link-component";
-import { Question } from "@/lib/types";
+import { Author, Question } from "@/lib/types";
 import { timeAgo } from "@/lib/util";
 import { Avatar } from "@heroui/avatar";
 import { Chip } from "@heroui/chip";
 
 type Props = {
   question: Question;
+  author: Author;
 };
 
-export default function QuestionFooter({ question }: Props) {
+export default function QuestionFooter({ question, author }: Props) {
   return (
     <div className="flex justify-between mt-2">
       <div className="flex flex-col self-end">
@@ -33,11 +34,16 @@ export default function QuestionFooter({ question }: Props) {
           <Avatar
             className="h-6 w-6"
             color="secondary"
-            name={question.askerDisplayName.charAt(0)}
+            name={author.displayName.charAt(0)}
           />
           <div className="flex flex-col items-center">
-            <span>{question.askerDisplayName}</span>
-            <span className="self-start text-sm font-semibold">42</span>
+            <span>{author.displayName}</span>
+            {/* Nothing rather than a 0 when the profile did not resolve. */}
+            {author.reputation !== null && (
+              <span className="self-start text-sm font-semibold">
+                {author.reputation}
+              </span>
+            )}
           </div>
         </div>
       </div>
