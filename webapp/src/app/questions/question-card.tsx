@@ -1,4 +1,4 @@
-import { Question } from "@/lib/types";
+import { Author, Question } from "@/lib/types";
 import { stripHtmlTags, timeAgo } from "@/lib/util";
 import { CheckIcon } from "@heroicons/react/24/outline";
 import { Avatar } from "@heroui/avatar";
@@ -9,9 +9,12 @@ import Link from "next/link";
 
 type Props = {
   question: Question;
+  // Resolved by the page: the profile service is the source of truth for the name, and the one the
+  // question carries is only the fallback.
+  author: Author;
 };
 
-export default function QuestionCard({ question }: Props) {
+export default function QuestionCard({ question, author }: Props) {
   return (
     <div className="flex gap-6 px-6">
       <div className="flex flex-col text-sm gap-3 min-w-[6rem] items-end">
@@ -69,11 +72,9 @@ export default function QuestionCard({ question }: Props) {
             <Avatar
               className="h-6 w-6"
               color="secondary"
-              name={question.askerDisplayName.charAt(0)}
+              name={author.displayName.charAt(0)}
             />
-            <Link href={`/profiles/${question.askerId}`}>
-              {question.askerDisplayName}
-            </Link>
+            <Link href={`/profiles/${author.id}`}>{author.displayName}</Link>
             <span>asked {timeAgo(question.createdAt)}</span>
           </div>
         </div>
