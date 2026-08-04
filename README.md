@@ -175,8 +175,9 @@ would refuse the certificate the browser accepts.
 
 The `overflow` realm is imported automatically from `Overflow.AppHost/infra/realms` the first time
 the `keycloak-data` volume is created: public client `postman` and users `admin`, `bob`, `dave`.
-Passwords live in `Overflow.AppHost/infra/.env`. Postman collections live outside this repo, in
-`OverflowAssets/postman`.
+Their credentials are argon2 hashes in the realm import, so the passwords are not readable from the
+repo — `infra/.env` only holds the container passwords, Keycloak's admin among them. Postman
+collections live outside this repo, in `OverflowAssets/postman`.
 
 Two things are **not** in that import and live only in the `keycloak-data` volume, so deleting it
 means recreating them:
@@ -212,6 +213,12 @@ Conventions worth knowing before editing `webapp`:
 - Images pasted into the editor go through `POST /api/images`, which checks the session and stores
   the file in MinIO (`src/lib/storage.ts`); the response carries the public URL and the key used to
   delete it later. The bucket is created on first upload and opened for anonymous reads only.
+- Display names and reputations come from the profile service, not from the question: each page
+  resolves every author it renders in one `GET /profiles/batch` call and hands each component an
+  `Author` carrying the denormalised name as a fallback (`src/lib/profiles.ts`). That resolver never
+  throws, so a profile-service failure degrades to the fallback names and hides the reputation
+  instead of reaching the error boundary — at the cost of the page waiting out the gateway's 502,
+  around 2.7s.
 
 ## Known issues
 
