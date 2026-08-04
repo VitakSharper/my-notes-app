@@ -12,12 +12,20 @@ namespace ProfileService.Middleware;
 /// </summary>
 public class UserProfileCreationMiddleware(RequestDelegate next)
 {
+    // Keycloak JWT claim names, same order of preference as QuestionsController: the realm puts the
+    // username in preferred_username, and ClaimTypes.Name alone resolved to nothing - every profile
+    // created before this was named "un-named".
+    private const string KeycloakPreferredUsernameClaim = "preferred_username";
+    private const string KeycloakNameClaim = "name";
+
     public async Task InvokeAsync(HttpContext context, ProfileDbContext db)
     {
         if (context.User.Identity?.IsAuthenticated is true)
         {
             var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var name = context.User.FindFirstValue(ClaimTypes.Name);
+            var name = context.User.FindFirstValue(KeycloakPreferredUsernameClaim)
+                       ?? context.User.FindFirstValue(KeycloakNameClaim)
+                       ?? context.User.FindFirstValue(ClaimTypes.Name);
 
             if (userId is not null)
             {
@@ -28,7 +36,8 @@ public class UserProfileCreationMiddleware(RequestDelegate next)
                     db.UserProfiles.Add(new UserProfile
                     {
                         Id = userId,
-                        // The claim is there in practice; the fallback only keeps the compiler happy.
+                        // Keycloak requires a username, so the chain above yields one in practice;
+                        // the literal is only here to keep DisplayName non-null.
                         DisplayName = name ?? "un-named"
                     });
 
