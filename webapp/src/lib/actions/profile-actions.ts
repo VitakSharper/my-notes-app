@@ -1,7 +1,17 @@
 "use server";
 
 import { fetchClient } from "@/lib/fetch-client";
-import { ProfileSummary } from "@/lib/types";
+import { ProfileSummary, UserProfile } from "@/lib/types";
+
+/**
+ * One profile, for the page the question cards link to.
+ *
+ * An unknown id answers 404, which fetchClient turns into the not-found page - the right outcome
+ * here, unlike in the batch call where a missing profile is only a name that has to fall back.
+ */
+export async function getProfileById(id: string) {
+  return fetchClient<UserProfile>(`/profiles/${id}`, "GET");
+}
 
 /**
  * The display name and reputation for a set of user ids, in one request.

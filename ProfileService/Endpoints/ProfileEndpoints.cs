@@ -38,6 +38,17 @@ public static class ProfileEndpoints
             return Results.Ok(rows);
         });
 
+        // One profile, for the page a question card links to. Anonymous for the same reason as the
+        // batch above, and declared last on purpose: routing prefers a literal segment over a
+        // parameter, so "me" and "batch" still reach their own handlers rather than being read as an
+        // id - but reading in that order makes the precedence obvious.
+        app.MapGet("/profiles/{id}", async (string id, ProfileDbContext db) =>
+        {
+            var profile = await db.UserProfiles.FindAsync(id);
+
+            return profile is null ? Results.NotFound() : Results.Ok(profile);
+        });
+
         return app;
     }
 }
