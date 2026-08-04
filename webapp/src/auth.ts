@@ -2,7 +2,7 @@ import { apiConfig, authConfig } from "@/lib/config";
 import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   providers: [
     // The provider needs no credentials: Auth.js reads AUTH_KEYCLOAK_ID, AUTH_KEYCLOAK_SECRET
     // and AUTH_KEYCLOAK_ISSUER from the environment by convention - importing authConfig is what
@@ -22,13 +22,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, account, profile }) {
+    async jwt({ token, account, profile, trigger, session }) {
       const now = Math.floor(Date.now() / 1000);
 
       // token.sub is not the Keycloak user id; the id we need to compare against a question's
       // askerId only ever arrives on the profile, which is populated at sign-in.
       if (profile?.sub) {
         token.sub = profile.sub;
+      }
+
+      // Where unstable_update lands, called by the server action that saves a profile edit. The
+      // session was built at sign-in, so without this the nav would keep showing the old display
+      // name until the next login. Merged rather than replaced: the payload is a partial.
+      if (trigger === "update" && session?.user) {
+        token.user = { ...token.user, ...session.user };
       }
 
       // Sign-in is also the moment to reach the profile service: the call creates the profile row

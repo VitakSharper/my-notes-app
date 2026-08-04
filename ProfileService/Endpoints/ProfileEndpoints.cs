@@ -20,6 +20,30 @@ public static class ProfileEndpoints
             return profile is null ? Results.NotFound() : Results.Ok(profile);
         }).RequireAuthorization();
 
+        // The caller can only edit their own profile, so there is no id in the route: the token
+        // decides whose row is written. The updated profile comes back so the client can refresh the
+        // session it built at sign-in.
+        app.MapPut("/profiles/me", async (
+            UpdateProfileDto dto, ClaimsPrincipal user, ProfileDbContext db) =>
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (userId is null) return Results.Unauthorized();
+
+            var profile = await db.UserProfiles.FindAsync(userId);
+
+            // The middleware creates the row on the way in, so this only fires if it was deleted
+            // between that and here.
+            if (profile is null) return Results.NotFound();
+
+            profile.DisplayName = dto.DisplayName;
+            profile.Description = dto.Description;
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(profile);
+        }).RequireAuthorization();
+
         // Anonymous on purpose: questions are readable without signing in, and enriching them with
         // display names has to work for those readers too.
         app.MapGet("/profiles/batch", async (string ids, ProfileDbContext db) =>

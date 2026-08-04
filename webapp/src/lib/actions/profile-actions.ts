@@ -1,7 +1,10 @@
 "use server";
 
+import { unstable_update } from "@/auth";
 import { fetchClient } from "@/lib/fetch-client";
+import { ProfileSchema } from "@/lib/schemas/profile-schema";
 import { ProfileSummary, UserProfile } from "@/lib/types";
+import { revalidatePath } from "next/cache";
 
 /**
  * One profile, for the page the question cards link to.
@@ -11,6 +14,28 @@ import { ProfileSummary, UserProfile } from "@/lib/types";
  */
 export async function getProfileById(id: string) {
   return fetchClient<UserProfile>(`/profiles/${id}`, "GET");
+}
+
+/**
+ * Saves the signed-in user's own profile. There is no id to pass: the service reads the caller from
+ * the token, so no one can write someone else's row by changing a URL.
+ */
+export async function updateProfile(data: ProfileSchema) {
+  const result = await fetchClient<UserProfile>("/profiles/me", "PUT", {
+    body: data,
+  });
+
+  if (result.error || !result.data) return result;
+
+  // The session holds the profile as it was at sign-in, so the nav would keep the old display name
+  // without this.
+  await unstable_update({ user: result.data });
+
+  // Both places a display name is printed from a cached render.
+  revalidatePath(`/profiles/${result.data.id}`);
+  revalidatePath("/questions");
+
+  return result;
 }
 
 /**

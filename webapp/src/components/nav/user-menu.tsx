@@ -28,7 +28,11 @@ export default function UserMenu({ user }: Props) {
         </div>
       </DropdownTrigger>
       <DropdownMenu aria-label="user menu">
-        <DropdownItem key="edit">Edit profile</DropdownItem>
+        {/* Inert until now. HeroUI collection items take href themselves, so there is no `as` to
+            pass here the way Chip and Button need one. */}
+        <DropdownItem key="edit" href={`/profiles/${user.id}/edit`}>
+          Edit profile
+        </DropdownItem>
         <DropdownItem
           key="logout"
           className="text-danger"

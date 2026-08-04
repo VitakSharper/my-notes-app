@@ -13,6 +13,10 @@ builder.AddServiceDefaults();
 
 builder.Services.AddKeyClockAuthentication();
 
+// Turns the DataAnnotations on the request DTOs into a 400 with the field errors, instead of every
+// handler checking lengths by hand. Opt-in, and new in .NET 10 for minimal APIs.
+builder.Services.AddValidation();
+
 builder.AddNpgsqlDbContext<ProfileDbContext>("profileDb");
 
 // Conventional routing: the only configuration needed is where the handlers live.
